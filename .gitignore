@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.pytest_warehouse/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Local secrets
+.env
+
+# Generated artefacts - reproducible with `make data` / `make etl`
+data/raw/*.csv
+data/raw/_manifest.json
+data/warehouse/*.duckdb
+data/warehouse/*.duckdb.wal
+data/stream/*.jsonl
+data/exports/*
+reports/*.md
+reports/*.json
+reports/*.html
+!reports/.gitkeep
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan.binary
+crash.log
+# .terraform.lock.hcl is deliberately NOT ignored - the provider versions it
+# pins are what make a CI plan match a local one.
+
+# Document build toolchain
+docs/build/node_modules/
+# The rendered PDFs ARE the deliverable and are committed. Unlike a .pbix they
+# are read-only outputs of text sources in docs/build/, so a reviewer can read
+# them without a toolchain and still diff what produced them.
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
