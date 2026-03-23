@@ -1,0 +1,150 @@
+# ---------------------------------------------------------------------------
+# PulseAnalytics - production-shaped local stack.
+#
+#   docker compose up -d postgres redpanda      # infrastructure only
+#   docker compose --profile app up -d          # + dashboard and stream jobs
+#
+# The platform ALSO runs with nothing here started at all (DuckDB + file-based
+# event bus). This file exists so the same code can be demonstrated against
+# real Postgres and a real Kafka API before it is lifted to Azure.
+# ---------------------------------------------------------------------------
+name: pulseanalytics
+
+x-pulse-env: &pulse-env
+  PULSE_DB_ENGINE: postgres
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: pulse
+  POSTGRES_USER: pulse
+  POSTGRES_PASSWORD: pulse
+  PULSE_STREAM_BACKEND: kafka
+  PULSE_KAFKA_BROKERS: redpanda:9092
+  PULSE_LOG_LEVEL: INFO
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pulse-postgres
+    environment:
+      POSTGRES_DB: pulse
+      POSTGRES_USER: pulse
+      POSTGRES_PASSWORD: pulse
+      # Deterministic sort order so SQL results match the DuckDB run.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pulse-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulse -d pulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Redpanda speaks the Kafka protocol - drop-in for Kafka / Azure Event Hubs.
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    container_name: pulse-redpanda
+    command:
+      - redpanda start
+      - --smp 1
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --mode dev-container
+    ports:
+      - "19092:19092"
+      - "9644:9644"
+    volumes:
+      - pulse-redpanda:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  console:
+    image: redpandadata/console:v2.7.2
+    container_name: pulse-redpanda-console
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    ports:
+      - "8090:8080"
+
+  # ----------------------------------------------------------------- app tier
+  etl:
+    build: .
+    container_name: pulse-etl
+    profiles: ["app"]
+    environment: *pulse-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >-
+      sh -c "python data-generator/generate_data.py --preset small &&
+             python -m etl.pipeline --full-refresh"
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+
+  producer:
+    build: .
+    container_name: pulse-producer
+    profiles: ["app"]
+    environment: *pulse-env
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    command: python -m streaming.producer.event_producer --rate 8 --duration 0
+    volumes:
+      - ./data:/app/data
+
+  consumer:
+    build: .
+    container_name: pulse-consumer
+    profiles: ["app"]
+    environment: *pulse-env
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    command: python -m streaming.consumer.stream_consumer --duration 0
+    volumes:
+      - ./data:/app/data
+
+  dashboard:
+    build: .
+    container_name: pulse-dashboard
+    profiles: ["app"]
+    environment: *pulse-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: streamlit run dashboards/streamlit/app.py --server.address 0.0.0.0 --server.port 8501
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+
+  api:
+    build: .
+    container_name: pulse-api
+    profiles: ["app"]
+    environment: *pulse-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn streaming.processors.realtime_api:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  pulse-pgdata:
+  pulse-redpanda:
