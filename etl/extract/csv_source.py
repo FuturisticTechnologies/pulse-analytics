@@ -21,7 +21,16 @@ from pulse.logging_utils import get_logger
 log = get_logger("etl.extract.csv")
 
 # Column -> pandas dtype hints per table. Anything not listed is inferred.
-DATE_COLUMNS: dict[str, list[str]] = {}
+DATE_COLUMNS: dict[str, list[str]] = {
+    "stores": ["opened_date"],
+    "products": ["launch_date"],
+    "customers": ["signup_date"],
+    "campaigns": ["start_date", "end_date"],
+    "orders": ["order_ts", "order_date"],
+    "payments": ["payment_ts"],
+    "inventory_snapshots": ["snapshot_date"],
+    "customer_events": ["event_ts"],
+}
 
 # Tables in dependency order. Bronze has no constraints, but loading in this
 # order keeps the logs readable and matches the order a real CDC feed arrives.
