@@ -1,0 +1,288 @@
+name: CI
+
+# What this proves on every push:
+#   1. the code is importable and the SQL parses          (fast, fails first)
+#   2. the whole platform builds from nothing             (data -> gold marts)
+#   3. the data-quality suite passes on a real build      (exit 2 if not)
+#   4. the tests pass on the two supported Python versions
+#   5. the same SQL runs on PostgreSQL, not just DuckDB   (portability)
+#
+# Job order matters. `checks` runs in about 30 seconds and catches most
+# mistakes; nobody should wait four minutes for a matrix to tell them about a
+# syntax error.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Monday 06:00 UTC. A scheduled run on unchanged code catches dependency
+    # drift - the failure that otherwise surprises you on the day you ship.
+    - cron: "0 6 * * 1"
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PULSE_LOG_LEVEL: WARNING
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  checks:
+    name: Fast checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Everything compiles
+        run: python -m compileall -q pulse etl streaming analytics dashboards tests scripts
+
+      - name: Every SQL file parses into statements
+        run: |
+          python - <<'PY'
+          from pulse import sql as assets
+          from pulse.db import split_statements
+
+          total = 0
+          for path in assets.all_files():
+              statements = split_statements(path.read_text(encoding="utf-8"))
+              assert statements, f"{path} produced no statements"
+              total += len(statements)
+          print(f"{len(assets.all_files())} SQL files, {total} statements")
+          PY
+
+      - name: Every KPI in the docs has an implementation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          docs = Path("docs/kpi-definitions.md").read_text(encoding="utf-8")
+          sql = "\n".join(p.read_text(encoding="utf-8")
+                          for p in Path("database").rglob("*.sql"))
+
+          # Metrics the document names as living in SQL must actually exist there.
+          required = [
+              "avg_order_value", "gross_margin_pct", "retention_pct",
+              "churn_rate_pct", "roas", "days_of_cover", "rfm_segment",
+          ]
+          missing = [m for m in required if m not in sql]
+          assert not missing, f"documented but not implemented in SQL: {missing}"
+          assert "last-touch" in docs.lower(), "the attribution model must be stated"
+          print(f"{len(required)} documented metrics found in SQL")
+          PY
+
+  # ---------------------------------------------------------------------------
+  build-and-test:
+    name: Build and test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate two years of data
+        run: python data-generator/generate_data.py --preset small
+
+      # --offline: CI must never depend on a public endpoint being reachable.
+      # The FX extractor's fallback path is exercised here on purpose.
+      - name: Build the warehouse and fail on any data-quality ERROR
+        run: python -m etl.pipeline --full-refresh --offline --fail-on-error
+
+      - name: Run every analytical model
+        run: python -m analytics.run_analytics
+
+      - name: Exercise the streaming layer end to end
+        run: |
+          python -m streaming.producer.event_producer --backfill-minutes 10
+          python -m streaming.consumer.stream_consumer --duration 8 --from-start --truncate
+
+      - name: Healthcheck
+        run: python scripts/healthcheck.py
+
+      - name: Tests
+        run: python -m pytest -q
+
+      - name: Export for Power BI
+        run: python dashboards/powerbi/export_for_powerbi.py --marts-only
+
+      - name: Upload the reports this run produced
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-py${{ matrix.python-version }}
+          path: |
+            reports/*.md
+            data/raw/_manifest.json
+            data/exports/*.csv
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  postgres:
+    name: Portability - same SQL on PostgreSQL
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: pulse
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: pulse
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pulse -d pulse"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PULSE_DB_ENGINE: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: pulse
+      POSTGRES_USER: pulse
+      POSTGRES_PASSWORD: pulse
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install (including the Postgres driver)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-optional.txt
+
+      - name: Generate data
+        run: python data-generator/generate_data.py --preset small
+
+      # The claim this job exists to prove: the SQL in database/ is portable,
+      # so the Azure deployment is a lift rather than a rewrite. If the claim
+      # is false, it is false here and not in production.
+      - name: Build the warehouse on PostgreSQL
+        run: python -m etl.pipeline --full-refresh --offline --fail-on-error
+
+      - name: Healthcheck
+        run: python scripts/healthcheck.py
+
+  # ---------------------------------------------------------------------------
+  docker:
+    name: Image builds
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build (no push - this job proves it builds, not that it ships)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: pulseanalytics:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: The image can run the pipeline
+        run: docker run --rm pulseanalytics:ci python -m etl.pipeline --help
+
+  # ---------------------------------------------------------------------------
+  terraform:
+    name: Terraform validates
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Formatting
+        run: terraform fmt -check -recursive infrastructure/terraform
+
+      - name: Lint the workflows
+        uses: rhysd/actionlint@v1.7.7
+        with:
+          args: -color
+
+      # -backend=false: validation must not need Azure credentials or touch
+      # remote state, so this runs on a fork PR too. The backend block in
+      # main.tf is deliberately empty (each environment has its own state key),
+      # and -backend=false is what lets validation skip it.
+      #
+      # This job proves the configuration is well-formed. Deployment lives in
+      # .github/workflows/deploy-infrastructure.yml, behind an approval gate.
+      - name: Validate
+        working-directory: infrastructure/terraform
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate -no-color
+
+      - name: Every environment has a backend config and a tfvars file
+        working-directory: infrastructure/terraform
+        run: |
+          set -euo pipefail
+          # A missing pair here fails at deploy time, in front of an approver,
+          # rather than here where it costs nothing.
+          for env in dev prod; do
+            for f in "backend-${env}.hcl" "environments/${env}.tfvars"; do
+              [ -f "$f" ] || { echo "::error::missing $f"; exit 1; }
+            done
+            grep -q "key *= *\"pulse-${env}.tfstate\"" "backend-${env}.hcl"               || { echo "::error::backend-${env}.hcl points at the wrong state key"; exit 1; }
+            echo "$env: backend config and tfvars present, state key correct"
+          done
+
+          # dev and prod sharing a state key means the first apply destroys the
+          # other environment.
+          if [ "$(grep -h '^key' backend-*.hcl | sort -u | wc -l)" -ne 2 ]; then
+            echo "::error::backend configs do not use distinct state keys"
+            exit 1
+          fi
