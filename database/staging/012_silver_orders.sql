@@ -40,7 +40,7 @@ WHERE _rn = 1;
 DROP TABLE IF EXISTS silver.orders;
 CREATE TABLE silver.orders AS
 WITH deduped AS (
-    SELECT b.*, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY _loaded_at ASC) AS _rn
+    SELECT b.*, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY _loaded_at DESC, order_ts DESC) AS _rn
     FROM bronze.orders b
     WHERE order_id IS NOT NULL
       AND customer_id IS NOT NULL
