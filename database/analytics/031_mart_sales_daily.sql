@@ -61,7 +61,7 @@ SELECT
     COALESCE(shipping, 0)                                               AS shipping,
     COALESCE(tax, 0)                                                    AS tax,
     CASE WHEN orders_completed > 0
-         THEN ROUND(COALESCE(revenue, 0) / units_sold, 2) ELSE 0 END             AS avg_order_value,
+         THEN ROUND(COALESCE(revenue, 0) / orders_completed, 2) ELSE 0 END       AS avg_order_value,
     CASE WHEN COALESCE(revenue, 0) > 0
          THEN ROUND(COALESCE(gross_profit, 0) / revenue * 100, 2) ELSE 0 END     AS gross_margin_pct,
     CASE WHEN orders_placed > 0
