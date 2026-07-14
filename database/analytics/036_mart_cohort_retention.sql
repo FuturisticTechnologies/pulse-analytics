@@ -22,8 +22,8 @@ WITH win AS (
 first_order AS (
     SELECT
         o.customer_key,
-        MIN(o.signup_date) AS first_order_date,
-        CAST(DATE_TRUNC('month', CAST(MIN(o.signup_date) AS TIMESTAMP)) AS DATE) AS cohort_month
+        MIN(o.order_date) AS first_order_date,
+        CAST(DATE_TRUNC('month', CAST(MIN(o.order_date) AS TIMESTAMP)) AS DATE) AS cohort_month
     FROM gold.fact_orders o
     WHERE o.is_revenue
     GROUP BY o.customer_key
