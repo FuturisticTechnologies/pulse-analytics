@@ -16,8 +16,7 @@
 --     DROP SCHEMA ops CASCADE;  then re-run: python -m etl.pipeline --stage init
 -- ===========================================================================
 
-DROP TABLE IF EXISTS ops.pipeline_runs;
-CREATE TABLE ops.pipeline_runs (
+CREATE TABLE IF NOT EXISTS ops.pipeline_runs (
     run_id          VARCHAR(40),
     pipeline        VARCHAR(60),
     stage           VARCHAR(60),
@@ -30,8 +29,7 @@ CREATE TABLE ops.pipeline_runs (
     message         VARCHAR(1000)
 );
 
-DROP TABLE IF EXISTS ops.data_quality_results;
-CREATE TABLE ops.data_quality_results (
+CREATE TABLE IF NOT EXISTS ops.data_quality_results (
     run_id          VARCHAR(40),
     checked_at      TIMESTAMP,
     layer           VARCHAR(20),     -- bronze | silver | gold
@@ -50,8 +48,7 @@ CREATE TABLE ops.data_quality_results (
 
 -- Real-time landing zone. The stream consumer appends here; the realtime KPI
 -- views read from it, so streaming and batch share one query surface.
-DROP TABLE IF EXISTS ops.stream_events;
-CREATE TABLE ops.stream_events (
+CREATE TABLE IF NOT EXISTS ops.stream_events (
     event_id        VARCHAR(64),
     topic           VARCHAR(60),
     event_type      VARCHAR(40),
@@ -71,8 +68,7 @@ CREATE TABLE ops.stream_events (
 
 -- Rolling minute-level aggregates written by the stream processor. Keeping
 -- them in a table (not just memory) means the dashboard survives a restart.
-DROP TABLE IF EXISTS ops.realtime_kpis;
-CREATE TABLE ops.realtime_kpis (
+CREATE TABLE IF NOT EXISTS ops.realtime_kpis (
     window_start        TIMESTAMP,
     window_end          TIMESTAMP,
     orders              BIGINT,
@@ -87,8 +83,7 @@ CREATE TABLE ops.realtime_kpis (
 );
 
 -- Watermarks let incremental loads resume exactly where they stopped.
-DROP TABLE IF EXISTS ops.load_watermarks;
-CREATE TABLE ops.load_watermarks (
+CREATE TABLE IF NOT EXISTS ops.load_watermarks (
     table_name      VARCHAR(80),
     watermark_col   VARCHAR(60),
     watermark_value TIMESTAMP,
