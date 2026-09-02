@@ -4,8 +4,9 @@ Churn is *defined* in SQL (no order for CHURN_WINDOW_DAYS, see
 docs/kpi-definitions.md). This module answers the forward-looking question the
 definition cannot: **which currently-active customers are about to churn**.
 
-Method: logistic regression on behavioural features, fitted on features computed at
-the analysis date and labelled by current churn state. That framing matters more than the choice of model:
+Method: logistic regression on behavioural features, fitted on a snapshot taken
+90 days before the analysis date and labelled by what actually happened in
+those 90 days. That framing matters more than the choice of model:
 
 * Training on features computed *today* against a label of *today* leaks the
   future and produces a model with a beautiful AUC and no predictive value -
