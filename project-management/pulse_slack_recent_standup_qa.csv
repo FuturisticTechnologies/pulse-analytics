@@ -1,0 +1,197 @@
+timestamp,channel,username,message
+1783587900,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-09. 24 checks, 20 pass, 4 WARN, 0 fail. All four warnings within threshold."
+1783593000,#pulseanalytics-qa,neha.chauhan,"Picking up the customer marts regression pack (PULSE-77). Scope is customer_360, RFM, cohort retention and churn monthly. Starting with the assertion I care most about: two runs on the same data produce identical output."
+1783674300,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-10. 24 checks, 20 pass, 4 WARN, 0 fail."
+1783692900,#pulseanalytics-qa,neha.chauhan,"[PULSE-71] customer_360 row count assertion is in - it must equal distinct customers in the dimension. Passing, including the zero-order customers that stay in deliberately."
+1783933500,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-13. 24 checks, 20 pass, 4 WARN, 0 fail. FX carry-forward at 28.4%, threshold 35%."
+1783942800,#pulseanalytics-qa,neha.chauhan,"[PULSE-72] RFM segment sizes sum to the active customer count, and I ran the segmentation twice on the same dataset and got identical sizes. That is only true because of the analysis window, so it is really a test of ADR-002."
+1784041800,#pulseanalytics-qa,neha.chauhan,"Adding a cohort size assertion after PULSE-74: cohort size must equal the count of customers whose first order falls in that month. It cannot catch a bad definition, but it will catch a regression away from the good one."
+1784106300,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-15. 24 checks, 20 pass, 4 WARN, 0 fail."
+1784197200,#pulseanalytics-qa,neha.chauhan,"[PULSE-77] Every recency metric now has a paired assertion: it must change when analysis_window moves, and must not change otherwise. Caught nothing, which is the correct outcome."
+1784279100,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-17. 24 checks, 20 pass, 4 WARN, 0 fail."
+1784287800,#pulseanalytics-qa,neha.chauhan,"[PULSE-77] Customer pack complete and in CI: 19 assertions across four marts. Coverage summary for the review - bronze, silver, gold, marts and dashboards are covered. Analytics modules and streaming are not."
+1784288700,#pulseanalytics-qa,geetha.nallamada,"[PULSE-77] Noted, and streaming becomes coverable next sprint. The analytics gap is the one that will bite us, because a wrong model output looks exactly like a right one."
+1784624700,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-21. 24 checks, 20 pass, 4 WARN, 0 fail."
+1784644800,#pulseanalytics-qa,neha.chauhan,"[PULSE-79] Streaming test approach for the sprint: everything runs against the file bus in CI, and the Kafka path gets exercised locally against Redpanda. Same consumer code either way, so we are not testing a stand-in."
+1784797500,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-23. 24 checks, 20 pass, 4 WARN, 0 fail. Unattributed orders at 34.6%, threshold 40% - worth watching, it has drifted up half a point this month."
+1784801700,#pulseanalytics-qa,geetha.nallamada,"Good catch on the drift. Not actionable yet, but that is exactly the pattern PULSE-121 would catch automatically instead of relying on someone reading carefully."
+1785229500,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-28. 24 checks, 20 pass, 4 WARN, 0 fail."
+1785338400,#pulseanalytics-qa,neha.chauhan,"[PULSE-82] Consumer crash test: kill mid-batch, restart, assert no duplicates and no gaps. Passes on the current build. I also ran it against the earlier build where the offset commit came first and it failed, so the test is doing real work rather than agreeing with the implementation."
+1785488700,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-07-31. 24 checks, 20 pass, 4 WARN, 0 fail."
+1785508200,#pulseanalytics-qa,neha.chauhan,[PULSE-83] Replay test in: the same seeded stream produces identical KPI output across two runs. That is the assertion that makes the whole real-time layer testable.
+1785834300,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-08-04. 24 checks, 20 pass, 4 WARN, 0 fail."
+1785849600,#pulseanalytics-qa,neha.chauhan,"Test scope for the streaming ops tables. Three things I want asserted: events land once, the KPI window recomputes from what landed, and the ops tables survive a batch rebuild. The third one has no coverage at all today."
+1785920700,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-08-05. 24 checks, 20 pass, 4 WARN, 0 fail."
+1786095000,#pulseanalytics-qa,neha.chauhan,"Following up on yesterday's incident. PULSE-86 is written and it fails against main, which is what I wanted to confirm before anyone fixes anything - otherwise I am only asserting that the fix works."
+1786097400,#pulseanalytics-qa,geetha.nallamada,"[PULSE-86] That sequencing is right and I want it to be the habit: for a silent failure, write the failing test first. It is the only way to know the test would have caught it."
+1786352700,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-08-10. 24 checks, 20 pass, 4 WARN, 0 fail."
+1786533600,#pulseanalytics-qa,neha.chauhan,"Both PULSE-86 assertions green on the fix branch: the behavioural test (land events, rebuild, counts unchanged) and the DDL scan. The scan is the one that catches someone reintroducing the pattern in a file that is not wired in yet."
+1786611900,#pulseanalytics-qa,divya.maram,"[PULSE-84] [automated] Nightly quality suite - run 2026-08-13. 25 checks, 21 pass, 4 WARN, 0 fail. New check: real-time to batch revenue reconciliation for a closed day."
+1786632600,#pulseanalytics-qa,neha.chauhan,[PULSE-87] Staleness tested by stopping the producer. The page flags stale after the threshold rather than presenting an old window as current. That was the behaviour I was most worried about on that page.
+1786698300,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-08-14. 25 checks, 21 pass, 4 WARN, 0 fail."
+1786720200,#pulseanalytics-qa,neha.chauhan,"[PULSE-106] Coverage after this sprint: streaming is now covered end to end, including the failure modes. Remaining gap is the analytics modules - forecasting, churn, inventory, basket. All four land next sprint or the one after."
+1787043900,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-08-18. 25 checks, 21 pass, 4 WARN, 0 fail."
+1787149200,#pulseanalytics-qa,neha.chauhan,"[PULSE-90] Marketing test scope. The thing I want covered is not the arithmetic, it is that every revenue column names its attribution basis. A column called revenue in a marketing mart is the bug."
+1787303100,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-08-21. 25 checks, 21 pass, 4 WARN, 0 fail."
+1787326200,#pulseanalytics-qa,neha.chauhan,[PULSE-91] Added the cross-model assertion Divya suggested: all five attribution models must sum to the same total attributed revenue. Time decay was out by 0.4% from a rounding accumulation. Fixed and green.
+1787648700,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-08-25. 25 checks, 21 pass, 4 WARN, 0 fail."
+1787758800,#pulseanalytics-qa,neha.chauhan,"[PULSE-93] Every figure on the marketing page verified against the marts, and every model column against attribution.py directly. All match, model ordering is fixed per the design system."
+1787829300,#pulseanalytics-qa,amit.shinde,[PULSE-94] Joining this channel. From the business side the check I would want is that the incrementality proxy can never appear without its caveat next to it - the caveat is the thing that gets lost in a screenshot.
+1787830800,#pulseanalytics-qa,neha.chauhan,"[PULSE-94] That is testable and worth doing. Adding an assertion that the proxy tile renders its limitation text, so removing the caveat fails the build."
+1787907900,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-08-28. 25 checks, 21 pass, 4 WARN, 0 fail."
+1788253500,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-09-01. 25 checks, 21 pass, 4 WARN, 0 fail."
+1788269400,#pulseanalytics-qa,neha.chauhan,Starting the analytics regression pack (PULSE-106). This is the last uncovered layer and it is the one where a wrong answer looks most like a right one.
+1788426300,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-09-03. 25 checks, 21 pass, 4 WARN, 0 fail."
+1788444600,#pulseanalytics-qa,neha.chauhan,"[PULSE-101] Adding temporal validation to the analytics pack after the churn AUC came in at 0.94: maximum feature timestamp must precede the label window start. It is mechanical, but leakage is subtle to spot and trivial to assert."
+1788512700,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-09-04. 25 checks, 21 pass, 4 WARN, 0 fail."
+1788517500,#pulseanalytics-qa,neha.chauhan,"[PULSE-106] Temporal validation passing against the rewound snapshot. Forecast completeness in too - one row per series per horizon step, no gaps, and every model reports its backtest error including the naive baseline."
+1788519000,#pulseanalytics-qa,geetha.nallamada,[PULSE-99] The baseline being a required field rather than an optional one is the right call. It makes it impossible to publish a forecast without saying what it beat.
+1788771900,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-09-07. 25 checks, 21 pass, 4 WARN, 0 fail. Email completeness 0.08%, threshold 0.15%."
+1788792000,#pulseanalytics-qa,neha.chauhan,"[PULSE-106] Hand-worked a basket lift example against a small fixture so the assertion checks arithmetic I have verified myself, rather than checking the implementation against itself."
+1788858300,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-09-08. 25 checks, 21 pass, 4 WARN, 0 fail."
+1788880800,#pulseanalytics-qa,neha.chauhan,"[PULSE-106] Analytics pack status: forecasting and churn covered, basket blocked on PULSE-104, inventory blocked on PULSE-103. Also picking up the three traceability rows Amit found with a tile and no test."
+1788944700,#pulseanalytics-qa,divya.maram,"[automated] Nightly quality suite - run 2026-09-09. 25 checks, 21 pass, 4 WARN, 0 fail."
+1788953400,#pulseanalytics-qa,neha.chauhan,"Starting the UAT pack (PULSE-115). Scripted scenarios per stakeholder group, in business language, with expected results derived from the KPI document rather than from the current dashboard output - otherwise we are only testing that the dashboard agrees with itself."
+1788954900,#pulseanalytics-qa,amit.shinde,[PULSE-115] I will facilitate those sessions and take the sign-offs into the traceability matrix. Finance and marketing first.
+1788962700,#pulseanalytics-qa,neha.chauhan,"One thing for the retro: every defect we have found this year has been silent - a wrong number rather than a crash. Nine bugs, and the only ones a person noticed first were the ones where the number looked odd. That is an argument for more assertions between layers, not more unit tests."
+1783588500,#pulseanalytics-standup,geetha.nallamada,Standup. Yesterday: customer_360 grain and the zero-order decision. Today: cohort retention SQL (PULSE-73). No blockers.
+1783588620,#pulseanalytics-standup,divya.maram,Yesterday: RFM quintile logic (PULSE-72). Today: segment naming and getting the boundaries into the KPI doc. No blockers.
+1783588740,#pulseanalytics-standup,devendranath.singam,Yesterday: reran the index review now the marts exist (PULSE-53). Today: reading up on Redpanda ahead of the streaming sprint. No blockers.
+1783588860,#pulseanalytics-standup,neha.chauhan,"Yesterday: scoped the customer regression pack (PULSE-77). Today: the determinism assertion. Blocked until RFM lands, so I am writing it against customer_360 first."
+1783674900,#pulseanalytics-standup,geetha.nallamada,"[PULSE-73] Standup. Yesterday: cohort SQL. Today: period-number arithmetic, which is the part I expect to get wrong. No blockers."
+1783675020,#pulseanalytics-standup,divya.maram,Yesterday: RFM PR up for review. Today: churn window rules per segment (PULSE-75). No blockers.
+1783675140,#pulseanalytics-standup,devendranath.singam,[PULSE-79] Yesterday: Redpanda reading. Today: drafting the bus interface so we can argue about it before anything is written against it.
+1783675260,#pulseanalytics-standup,neha.chauhan,"[PULSE-72] Yesterday: reviewing the RFM PR. Today: same, plus the customer_360 row count assertion. No blockers."
+1783934100,#pulseanalytics-standup,geetha.nallamada,"[PULSE-73] Standup. Yesterday: cohort build running end to end. Today: looking at a 60% cliff between period 0 and period 1 that I cannot explain. Not blocked, but that is the whole day."
+1783934220,#pulseanalytics-standup,divya.maram,[PULSE-75] Yesterday: churn window rules. Today: mart_churn_monthly build. No blockers.
+1783934340,#pulseanalytics-standup,devendranath.singam,[PULSE-79] Yesterday: bus interface draft. Today: writing it up properly plus the file-based implementation. No blockers.
+1783934460,#pulseanalytics-standup,neha.chauhan,[PULSE-77] Yesterday: RFM review done. Today: customer pack assertions. No blockers.
+1784020500,#pulseanalytics-standup,geetha.nallamada,"Standup. Yesterday: found the cohort cliff - it is the definition, not the data. Cohorts are on signup month and most signups never buy. Today: rebuilding on first purchase month and writing up PULSE-74."
+1784020620,#pulseanalytics-standup,divya.maram,"[PULSE-74] Yesterday: churn mart. Today: same, plus reviewing the cohort fix. Worth saying that is the second definition bug this quarter that produced a plausible wrong answer."
+1784020740,#pulseanalytics-standup,devendranath.singam,[PULSE-79] Yesterday: file bus implementation. Today: offsets and the consumer group bookkeeping. No blockers.
+1784020860,#pulseanalytics-standup,neha.chauhan,Yesterday: customer pack. Today: adding a cohort size assertion off the back of PULSE-74. It cannot catch a bad definition but it will catch a regression away from the good one.
+1784106900,#pulseanalytics-standup,geetha.nallamada,Standup. Yesterday: cohort rebuild. Today: CLV curves (PULSE-76). No blockers.
+1784107020,#pulseanalytics-standup,divya.maram,Yesterday: churn mart nearly done. Today: finishing it and starting the customer dashboard page layout. No blockers.
+1784107140,#pulseanalytics-standup,devendranath.singam,[PULSE-79] Yesterday: offset handling. Today: Kafka implementation against a local Redpanda container. No blockers.
+1784107260,#pulseanalytics-standup,neha.chauhan,[PULSE-77] Yesterday: cohort assertion written. Today: running the whole customer pack against a fresh build. No blockers.
+1784193300,#pulseanalytics-standup,geetha.nallamada,[PULSE-76] Standup. Yesterday: CLV realised curves. Today: projection horizon and labelling it on the chart. No blockers.
+1784193420,#pulseanalytics-standup,divya.maram,[PULSE-78] Yesterday: churn mart merged. Today: customer dashboard page. No blockers.
+1784193540,#pulseanalytics-standup,devendranath.singam,"[PULSE-79] Yesterday: Kafka implementation. Today: same consumer code against both buses, which is the thing that has to work. No blockers."
+1784193660,#pulseanalytics-standup,neha.chauhan,[PULSE-77] Yesterday: full customer pack run. Today: writing up what it does and does not cover for the sprint review.
+1784279700,#pulseanalytics-standup,geetha.nallamada,"[PULSE-74] Standup, and sprint review at 14:00. Yesterday: CLV done. Today: review prep. The cohort finding is the headline and I want it presented as an activation problem, not as a fix we quietly made."
+1784279820,#pulseanalytics-standup,divya.maram,"[PULSE-78] Yesterday: dashboard page started. Today: review prep, then carrying the page into next sprint."
+1784279940,#pulseanalytics-standup,devendranath.singam,"[PULSE-79] Yesterday: both bus implementations passing the same tests. Today: review, then streaming properly from Monday."
+1784280060,#pulseanalytics-standup,neha.chauhan,"[PULSE-77] Yesterday: coverage write-up. Today: review. Customer marts are covered; the analytics modules still are not, and that gap is growing."
+1784302200,#pulseanalytics-standup,geetha.nallamada,"Sprint 10 review done. Closed: customer_360, RFM, cohort retention, churn monthly, CLV, and the customer regression pack. Carrying the dashboard page into Sprint 11."
+1784304600,#pulseanalytics-standup,geetha.nallamada,"Retro, three things. Kept: raising PULSE-74 as a finding rather than a silent fix. Changed: Neha reviews definition changes before they land, not after. Tried: pairing on the cohort SQL, which found the period arithmetic bug in about ten minutes."
+1784538900,#pulseanalytics-standup,geetha.nallamada,Sprint 11 planning at 10:00. Two workstreams: finish the customer dashboard and start streaming for real. Standup: today is planning and the cohort write-up for the business.
+1784539020,#pulseanalytics-standup,divya.maram,"[PULSE-78] Yesterday off. Today: planning, then the customer dashboard page."
+1784539140,#pulseanalytics-standup,devendranath.singam,"[PULSE-80] Today: planning, then the four event topics and the producer. The two rules I want agreed in planning are event time only, and no metric definitions in the consumer."
+1784539260,#pulseanalytics-standup,neha.chauhan,"Today: planning. I want the streaming test approach agreed up front rather than retrofitted, because a broker in CI would make everything slow and flaky."
+1784549700,#pulseanalytics-standup,geetha.nallamada,"Sprint 11 committed: PULSE-78 through PULSE-83. 34 points, which is above our average, but PULSE-81 and PULSE-83 are small. Both streaming rules agreed and written into the epic."
+1784625300,#pulseanalytics-standup,geetha.nallamada,Standup. Yesterday: planning. Today: reviewing the customer dashboard and writing the cohort finding up for the business. No blockers.
+1784625420,#pulseanalytics-standup,divya.maram,"[PULSE-78] Yesterday: dashboard layout. Today: the cohort heatmap - sequential ramp, single hue, magnitude only. No blockers."
+1784625540,#pulseanalytics-standup,devendranath.singam,[PULSE-80] Yesterday: topic schemas. Today: making the producer emit correlated events rather than four independent streams. No blockers.
+1784625660,#pulseanalytics-standup,neha.chauhan,"[PULSE-79] Yesterday: streaming test approach. Today: writing it up, then reviewing the bus PR. No blockers."
+1784798100,#pulseanalytics-standup,geetha.nallamada,Standup. Yesterday: cohort write-up sent. Today: reviewing the consumer design. No blockers.
+1784798220,#pulseanalytics-standup,divya.maram,[PULSE-78] Yesterday: heatmap and CLV curves on the page. Today: churn trend section and the definition text on the page. No blockers.
+1784798340,#pulseanalytics-standup,devendranath.singam,"[PULSE-82] Yesterday: correlation in the producer. Today: consumer, micro-batching and the offset ordering. No blockers."
+1784798460,#pulseanalytics-standup,neha.chauhan,"[PULSE-82] Yesterday: bus review. Today: the crash test - kill the consumer mid-batch and assert no duplicates and no gaps. Blocked until the consumer exists, so writing it against the interface."
+1785143700,#pulseanalytics-standup,geetha.nallamada,"Standup. Yesterday: reviewed the customer page end to end. Today: mart reconciliation checks for the streaming layer, so real-time and batch revenue have to agree. No blockers."
+1785143820,#pulseanalytics-standup,divya.maram,[PULSE-78] Yesterday: churn trend section. Today: empty states and the segment membership rule on the cohort chart. No blockers.
+1785143940,#pulseanalytics-standup,devendranath.singam,"[PULSE-82] Yesterday: micro-batching. Today: the write-then-commit ordering, which is the part that has to be right. No blockers."
+1785144060,#pulseanalytics-standup,neha.chauhan,[PULSE-82] Yesterday: crash test scaffolding. Today: running it. No blockers.
+1785316500,#pulseanalytics-standup,geetha.nallamada,Standup. Yesterday: reconciliation checks drafted. Today: same. No blockers.
+1785316620,#pulseanalytics-standup,divya.maram,[PULSE-78] Yesterday: empty states. Today: verifying every figure on the customer page against the marts before it goes for review.
+1785316740,#pulseanalytics-standup,devendranath.singam,"[PULSE-82] Yesterday: commit ordering. Today: consumer PR up, and event-time windowing after that. No blockers."
+1785316860,#pulseanalytics-standup,neha.chauhan,"[PULSE-82] Yesterday: crash test passed on the current build. Today: running it against an earlier build to check the test can actually fail - it did, which is what I wanted to see."
+1785489300,#pulseanalytics-standup,geetha.nallamada,"Standup, sprint review at 14:00. Yesterday: reconciliation. Today: review prep. Good sprint - streaming went from nothing to a working consumer."
+1785489420,#pulseanalytics-standup,divya.maram,"[PULSE-6] Yesterday: page verification. Today: review. Customer dashboard is done, which closes the customer epic."
+1785489540,#pulseanalytics-standup,devendranath.singam,"[PULSE-83] Yesterday: consumer merged. Today: event-time windowing and the replay test, then review."
+1785489660,#pulseanalytics-standup,neha.chauhan,"[PULSE-83] Yesterday: crash test. Today: replay test with Deven, then review."
+1785511200,#pulseanalytics-standup,geetha.nallamada,Sprint 11 review done. All six stories closed and the customer epic is complete. Retro Monday morning since we ran long.
+1785748500,#pulseanalytics-standup,geetha.nallamada,"Sprint 11 retro at 09:30, then Sprint 12 planning at 11:00. Focus this sprint: land the streaming ops tables and the real-time page."
+1785752400,#pulseanalytics-standup,geetha.nallamada,"Retro. Kept: agreeing the streaming rules in planning rather than discovering them in review. Changed: Neha gets test-approach input at planning, not after the design lands. Tried: writing tests against the interface before the implementation, which worked well enough to keep."
+1785760200,#pulseanalytics-standup,geetha.nallamada,Sprint 12 committed: PULSE-84 through PULSE-89. 28 points.
+1785760500,#pulseanalytics-standup,devendranath.singam,Flagging a risk I have no evidence for yet: we have never tested what a full batch rebuild does to the streaming tables. Probably fine.
+1785834900,#pulseanalytics-standup,geetha.nallamada,[PULSE-84] Standup. Yesterday: planning and retro. Today: the SQL for the real-time KPI window - all definitions stay in SQL. No blockers.
+1785835020,#pulseanalytics-standup,divya.maram,[PULSE-87] Yesterday: planning. Today: real-time dashboard page layout. No blockers.
+1785835140,#pulseanalytics-standup,devendranath.singam,[PULSE-84] Yesterday: planning. Today: ops.stream_events and ops.realtime_kpis. No blockers.
+1785835260,#pulseanalytics-standup,neha.chauhan,Yesterday: planning. Today: test scope for the streaming ops tables. No blockers.
+1786007700,#pulseanalytics-standup,geetha.nallamada,[PULSE-84] Standup. Yesterday: KPI window SQL. Today: the reconciliation between real-time and batch for a closed day. No blockers.
+1786007820,#pulseanalytics-standup,divya.maram,[PULSE-85] Yesterday: page layout. Today: something is wrong - the real-time page is showing zeros this morning and I ran a full rebuild last night. Investigating before anything else.
+1786007940,#pulseanalytics-standup,devendranath.singam,"[PULSE-85] Yesterday: ops tables landing events. Today: was going to be the API, now it is helping Divya with whatever that is."
+1786008060,#pulseanalytics-standup,neha.chauhan,"[PULSE-86] Yesterday: test scope. Today: same, and I have a bad feeling this is the gap I flagged in my first week."
+1786094100,#pulseanalytics-standup,geetha.nallamada,"[PULSE-85] Standup. Yesterday was the ops.stream_events incident - four hours of events gone, no error anywhere. Today: back to the reconciliation work while Deven fixes the coupling."
+1786094220,#pulseanalytics-standup,divya.maram,"[PULSE-87] Yesterday: found it and handed it over. Today: real-time page, properly this time."
+1786094340,#pulseanalytics-standup,devendranath.singam,[PULSE-85] Yesterday: root cause - ops DDL was in the bronze init path with DROP and CREATE. Today: moving it out and making everything IF NOT EXISTS.
+1786094460,#pulseanalytics-standup,neha.chauhan,"[PULSE-86] Yesterday: confirmed my test fails against main, which is what I wanted before fixing anything. Today: the DDL scan alongside it."
+1786353300,#pulseanalytics-standup,geetha.nallamada,"[PULSE-85] Standup. Yesterday: reconciliation. Today: same. The incident write-up goes into the retro rather than being absorbed quietly - two failures at once, destructive DDL and cross-layer coupling."
+1786353420,#pulseanalytics-standup,divya.maram,"[PULSE-87] Yesterday: real-time page tiles. Today: the staleness indicator, which I think matters more than the tiles."
+1786353540,#pulseanalytics-standup,devendranath.singam,"[PULSE-85] Yesterday: fix drafted. Today: PR up, plus grepping the repo for every other DROP TABLE."
+1786353660,#pulseanalytics-standup,neha.chauhan,[PULSE-86] Yesterday: DDL scan. Today: reviewing the fix and running both tests against it.
+1786526100,#pulseanalytics-standup,geetha.nallamada,"[PULSE-84] Standup. Yesterday: reviewed the fix. Today: real-time to batch reconciliation is green for a closed day, so writing that up. No blockers."
+1786526220,#pulseanalytics-standup,divya.maram,[PULSE-89] Yesterday: staleness indicator. Today: funnel and payments mart. No blockers.
+1786526340,#pulseanalytics-standup,devendranath.singam,"[PULSE-88] Yesterday: PULSE-85 merged. Today: the real-time API, which is deliberately boring - it reads the table and returns it."
+1786526460,#pulseanalytics-standup,neha.chauhan,[PULSE-87] Yesterday: both tests green. Today: testing the staleness behaviour by stopping the producer.
+1786698900,#pulseanalytics-standup,geetha.nallamada,"[PULSE-7] Standup, review at 14:00. Yesterday: reconciliation write-up. Today: review. This closes the streaming epic, incident included."
+1786699020,#pulseanalytics-standup,divya.maram,"[PULSE-89] Yesterday: funnel mart. Today: finishing it, then review."
+1786699140,#pulseanalytics-standup,devendranath.singam,[PULSE-120] Yesterday: API merged. Today: review. Also want to reopen the alerting conversation - a stalled consumer is still found by someone opening the dashboard.
+1786699260,#pulseanalytics-standup,neha.chauhan,"Yesterday: staleness verified. Today: review, then the coverage gaps write-up."
+1786722000,#pulseanalytics-standup,geetha.nallamada,Sprint 12 review done. Streaming epic closed. PULSE-85 was the ugly one and it is the reason ops.* is now protected by a test.
+1786958100,#pulseanalytics-standup,geetha.nallamada,"Sprint 13 planning at 10:00. Marketing attribution this sprint, and Amit starts a week today so there is onboarding in the plan as real work rather than as an afterthought."
+1786958220,#pulseanalytics-standup,divya.maram,"[PULSE-92] Today: planning, then the acquisition channel mart."
+1786958340,#pulseanalytics-standup,devendranath.singam,"[PULSE-95] Today: planning. Access requests for Amit are in - warehouse read is the slow one, it needs the data owner."
+1786958460,#pulseanalytics-standup,neha.chauhan,Today: planning. I want the marketing numbers verified against the marts before that page goes anywhere near a budget conversation.
+1786969200,#pulseanalytics-standup,geetha.nallamada,"[PULSE-91] Sprint 13 committed: PULSE-90 through PULSE-94, plus onboarding. The attribution story is the big one and we are publishing five models rather than picking one."
+1787130900,#pulseanalytics-standup,geetha.nallamada,[PULSE-91] Standup. Yesterday: campaign and channel marts. Today: attribution module - five models over one touchpoint builder. No blockers.
+1787131020,#pulseanalytics-standup,divya.maram,[PULSE-92] Yesterday: acquisition mart. Today: LTV to CAC by channel with payback. No blockers.
+1787131140,#pulseanalytics-standup,devendranath.singam,[PULSE-107] Yesterday: access requests. Today: back on Terraform ahead of Sprint 14. No blockers.
+1787131260,#pulseanalytics-standup,neha.chauhan,[PULSE-90] Yesterday: marketing test scope. Today: verifying the campaign mart columns against the KPI doc. No blockers.
+1787303700,#pulseanalytics-standup,geetha.nallamada,"[PULSE-91] Standup. Yesterday: attribution models running. Today: the upper_funnel_bias measure, which is where the interesting finding is. No blockers."
+1787303820,#pulseanalytics-standup,divya.maram,"[PULSE-92] Yesterday: LTV to CAC. Today: two channels have strong first-order ROAS and poor LTV to CAC, so writing that up. No blockers."
+1787303940,#pulseanalytics-standup,devendranath.singam,[PULSE-107] Yesterday: Terraform modules. Today: same. No blockers.
+1787304060,#pulseanalytics-standup,neha.chauhan,[PULSE-91] Yesterday: column verification. Today: found the models were not summing to the same total - Divya spotted it first in review and it turned out to be a rounding accumulation in time decay.
+1787562900,#pulseanalytics-standup,geetha.nallamada,"[PULSE-96] Standup, and Amit joins us today as BA. Yesterday: attribution assertions in. Today: walking Amit through the KPI contract, then the marketing page."
+1787563020,#pulseanalytics-standup,divya.maram,[PULSE-93] Yesterday: acquisition write-up. Today: marketing dashboard page. No blockers.
+1787563140,#pulseanalytics-standup,devendranath.singam,[PULSE-96] Yesterday: Terraform. Today: getting Amit's environment up first. Warehouse read came through on Friday.
+1787563260,#pulseanalytics-standup,neha.chauhan,[PULSE-91] Yesterday: attribution verification. Today: verifying the five-model output against attribution.py directly.
+1787735700,#pulseanalytics-standup,geetha.nallamada,[PULSE-94] Standup. Yesterday: onboarding and the marketing page review. Today: labelling the incrementality proxy where it appears.
+1787735820,#pulseanalytics-standup,divya.maram,[PULSE-93] Yesterday: marketing page. Today: finishing it. No blockers.
+1787735940,#pulseanalytics-standup,devendranath.singam,"[PULSE-108] Yesterday: Amit set up. Today: Terraform cost pass - the first draft prices at about GBP 600 a month for dev, which is not going to survive contact with finance."
+1787736060,#pulseanalytics-standup,neha.chauhan,"[PULSE-93] Yesterday: model verification, all match. Today: the marketing page figures against the marts."
+1787736180,#pulseanalytics-standup,amit.shinde,"[PULSE-96] First standup from me. Yesterday: stakeholder conversations with finance and marketing. Today: same with operations, then writing up the gap list."
+1787908500,#pulseanalytics-standup,geetha.nallamada,"[PULSE-8] Standup, review at 14:00. Yesterday: proxy labelling done. Today: review. This closes the marketing epic and answers the ROAS-of-4.2 question."
+1787908620,#pulseanalytics-standup,divya.maram,"[PULSE-93] Yesterday: marketing page finished. Today: review, then predictive work from Monday."
+1787908740,#pulseanalytics-standup,devendranath.singam,[PULSE-108] Yesterday: cost pass. Today: review. Dev is heading towards GBP 30 with auto-pause and scale to zero.
+1787908860,#pulseanalytics-standup,neha.chauhan,"[PULSE-106] Yesterday: page verified. Today: review, then planning the analytics regression pack - it is the last uncovered layer."
+1787908980,#pulseanalytics-standup,amit.shinde,"[PULSE-96] Yesterday: operations conversations. Today: finishing the gap list for the review. Eleven asks, and seven are already answerable."
+1788167700,#pulseanalytics-standup,geetha.nallamada,"[PULSE-9] Sprint 13 retro at 09:30, Sprint 14 planning at 11:00. Predictive analytics and cloud this sprint. Everything gets backtested against a seasonal naive baseline."
+1788171300,#pulseanalytics-standup,geetha.nallamada,"Retro. Kept: publishing five attribution models instead of picking one - the spread was the finding. Changed: Amit joins planning from now on rather than receiving the outcome. Tried: the cross-model total assertion, which caught a 0.4% rounding drift nobody would have seen on a chart."
+1788180000,#pulseanalytics-standup,geetha.nallamada,"Sprint 14 committed: forecasting, churn, inventory, basket, the operations page, Terraform and the analytics regression pack. It is a lot and I expect we carry two of them."
+1788254100,#pulseanalytics-standup,geetha.nallamada,"[PULSE-98] Standup. Yesterday: planning. Today: forecasting - Holt-Winters first, then the baselines. No blockers."
+1788254220,#pulseanalytics-standup,divya.maram,[PULSE-100] Yesterday: planning. Today: churn feature engineering. No blockers.
+1788254340,#pulseanalytics-standup,devendranath.singam,[PULSE-107] Yesterday: planning. Today: Terraform modules up for review. No blockers.
+1788254460,#pulseanalytics-standup,neha.chauhan,"[PULSE-106] Yesterday: planning. Today: analytics regression pack, starting with forecast completeness. No blockers."
+1788254580,#pulseanalytics-standup,amit.shinde,[PULSE-97] Yesterday: planning. Today: traceability matrix - 34 of 41 requirements mapped so far. No blockers.
+1788426900,#pulseanalytics-standup,geetha.nallamada,"[PULSE-98] Standup. Yesterday: Holt-Winters at 12.4% MAPE, which sounds fine until you have something to compare it to. Today: backtesting against seasonal naive."
+1788427020,#pulseanalytics-standup,divya.maram,"[PULSE-101] Yesterday: churn features. Today: first model scored 0.94 AUC, which I do not believe. Investigating leakage before anything else."
+1788427140,#pulseanalytics-standup,devendranath.singam,"[PULSE-107] Yesterday: Terraform review comments. Today: fixing them - Divya caught a public network access flag defaulting to true, which was me testing connectivity and forgetting."
+1788427260,#pulseanalytics-standup,neha.chauhan,"[PULSE-106] Yesterday: forecast completeness assertions. Today: temporal validation for the churn features, which looks timely."
+1788427380,#pulseanalytics-standup,amit.shinde,"[PULSE-97] Yesterday: traceability. Today: same. Three requirements have a dashboard tile and no test, and one has a test and no definition."
+1788513300,#pulseanalytics-standup,geetha.nallamada,"[PULSE-98] Standup. Yesterday: the naive baseline beats Holt-Winters on the daily series and loses on the weekly. Today: per-series selection by backtest, and publishing all three."
+1788513420,#pulseanalytics-standup,divya.maram,"[PULSE-101] Yesterday: confirmed leakage - features computed at the same moment as the label, so recency_days was the label. Today: rewinding the snapshot 90 days."
+1788513540,#pulseanalytics-standup,devendranath.singam,"[PULSE-109] Yesterday: Terraform fixes. Today: apply is green in dev, so writing ADR-006 on managed Postgres over Synapse."
+1788513660,#pulseanalytics-standup,neha.chauhan,[PULSE-106] Yesterday: temporal validation assertion written. Today: it passes after Divya's fix. Moving on to the basket assertions.
+1788513780,#pulseanalytics-standup,amit.shinde,[PULSE-116] Yesterday: traceability gaps. Today: starting the stakeholder KPI catalogue structure.
+1788772500,#pulseanalytics-standup,geetha.nallamada,"[PULSE-102] Standup. Yesterday: forecasting merged. Today: ADR-005 on the linear churn model, and starting basket affinity."
+1788772620,#pulseanalytics-standup,divya.maram,[PULSE-100] Yesterday: rewound snapshot. Today: 0.71 AUC and it actually predicts. Putting it up for review.
+1788772740,#pulseanalytics-standup,devendranath.singam,"Yesterday: ADR-006. Today: test tfvars, then the deploy workflows. Reminder that PULSE-120 alerting is still blocked on a rota, not on work."
+1788772860,#pulseanalytics-standup,neha.chauhan,[PULSE-106] Yesterday: basket fixture hand-worked. Today: the assertion against it. Blocked on PULSE-104 for the rest.
+1788772980,#pulseanalytics-standup,amit.shinde,[PULSE-105] Yesterday: catalogue structure. Today: same. Blocked on the operations page for seven traceability rows.
+1788945300,#pulseanalytics-standup,geetha.nallamada,"[PULSE-104] Standup. Yesterday: reviewing churn, ADR-005 drafted. Today: finishing the review and starting basket affinity properly. No blockers."
+1788945420,#pulseanalytics-standup,divya.maram,"[PULSE-103] Yesterday: churn in review. Today: inventory optimisation, now unblocked by the forecast. The operations page is behind it."
+1788945540,#pulseanalytics-standup,devendranath.singam,"[PULSE-113] Yesterday: test tfvars. Today: deploy workflow draft, and I want the rollback path exercised before we call it done."
+1788945660,#pulseanalytics-standup,neha.chauhan,"[PULSE-115] Yesterday: basket assertion. Today: analytics pack, then starting the UAT scenarios. Expected results come from the KPI doc, not from the dashboards."
+1788945780,#pulseanalytics-standup,amit.shinde,"[PULSE-115] Yesterday: KPI catalogue. Today: same, plus lining up UAT sessions with finance and marketing first - they have the most at stake in the definitions."
+1788963600,#pulseanalytics-standup,geetha.nallamada,"Mid-sprint check. Forecasting done, churn in review, ADR-006 done. Inventory, basket and the operations page are the three at risk. If we carry two, I would rather carry basket and the operations page than ship the inventory numbers without a service level agreed."
