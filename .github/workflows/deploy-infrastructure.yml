@@ -1,0 +1,412 @@
+name: Deploy infrastructure
+
+# Provisions the Azure estate with Terraform.
+#
+#   pull request        -> plan against dev, posted as a PR comment
+#   push to main        -> apply to dev automatically
+#   manual dispatch     -> plan, then apply to the chosen environment
+#
+# Production is never applied automatically. The prod path is deliberately two
+# jobs: `plan-prod` produces a SAVED PLAN FILE and prints it to the run summary,
+# then `apply-prod` waits on the `prod` environment's required reviewers and
+# applies *that exact file*.
+#
+# Applying a saved plan rather than re-planning is the point. A re-plan between
+# approval and apply can pick up a change nobody reviewed - which is how an
+# approved "add one firewall rule" becomes an unapproved "replace the database".
+
+on:
+  pull_request:
+    paths:
+      - "infrastructure/**"
+      - ".github/workflows/deploy-infrastructure.yml"
+      - ".github/actions/terraform-setup/**"
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/**"
+      - ".github/workflows/deploy-infrastructure.yml"
+      - ".github/actions/terraform-setup/**"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy
+        required: true
+        type: choice
+        options: [dev, prod]
+        default: dev
+      apply:
+        description: Apply the plan (unticked = plan only)
+        required: false
+        type: boolean
+        default: false
+
+# id-token: write is what makes OIDC possible. Nothing else needs write.
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  # Terraform takes a state lock. Two runs against one environment would have
+  # the second wait on a lock the first holds for its whole duration; serialising
+  # here fails fast instead of burning runner minutes on a queue.
+  group: infra-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.9.8"
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Formatting
+        run: terraform fmt -check -recursive infrastructure/terraform
+
+      # -backend=false: validation must not need Azure credentials or touch
+      # remote state, so it runs on a fork PR too.
+      - name: Validate
+        working-directory: infrastructure/terraform
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate -no-color
+
+      - name: Every tfvars key is a declared variable
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+
+          root = pathlib.Path("infrastructure/terraform")
+          declared = set(re.findall(
+              r'^variable\s+"([^"]+)"', (root / "variables.tf").read_text(), re.M))
+
+          problems = []
+          for tfvars in sorted((root / "environments").glob("*.tfvars")):
+              # Top-level assignments only: `key = ...` at column 0.
+              keys = set(re.findall(r'^([a-z_][a-z0-9_]*)\s*=', tfvars.read_text(), re.M))
+              unknown = keys - declared
+              if unknown:
+                  problems.append(f"{tfvars.name}: undeclared {sorted(unknown)}")
+              print(f"{tfvars.name}: {len(keys)} keys, all declared"
+                    if not unknown else f"{tfvars.name}: PROBLEM")
+
+          if problems:
+              sys.exit("\n".join(problems))
+          PY
+
+  # ---------------------------------------------------------------------------
+  # Dev: plan on a PR, apply on main. No approval gate - that is what dev is for.
+  # ---------------------------------------------------------------------------
+  plan-dev:
+    name: Plan (dev)
+    if: github.event_name == 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: dev
+          terraform-version: ${{ env.TF_VERSION }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Plan
+        id: plan
+        working-directory: infrastructure/terraform
+        env:
+          ARM_USE_OIDC: "true"
+          ARM_USE_AZUREAD: "true"
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_db_admin_password: ${{ secrets.DB_ADMIN_PASSWORD }}
+          TF_VAR_git_sha: ${{ github.sha }}
+        run: |
+          set -o pipefail
+          terraform plan \
+            -var-file=environments/dev.tfvars \
+            -input=false -no-color -lock-timeout=5m \
+            -detailed-exitcode 2>&1 | tee plan.txt
+          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Comment the plan on the pull request
+        uses: actions/github-script@v7
+        env:
+          PLAN_OUTCOME: ${{ steps.plan.outcome }}
+        with:
+          script: |
+            const fs = require('fs');
+            let plan = fs.readFileSync('infrastructure/terraform/plan.txt', 'utf8');
+
+            // GitHub caps a comment at 65 536 characters. Keep the tail - the
+            // summary line and the last resources are what a reviewer reads.
+            const LIMIT = 60000;
+            let truncated = false;
+            if (plan.length > LIMIT) {
+              plan = plan.slice(plan.length - LIMIT);
+              truncated = true;
+            }
+
+            const body = [
+              '## Terraform plan - `dev`',
+              '',
+              truncated ? '> Truncated to the last 60 000 characters; see the run log for the whole plan.' : '',
+              '',
+              '<details><summary>Plan output</summary>',
+              '',
+              '```terraform',
+              plan,
+              '```',
+              '',
+              '</details>',
+              '',
+              `Outcome: **${process.env.PLAN_OUTCOME}** · commit \`${context.sha.slice(0, 7)}\``,
+            ].join('\n');
+
+            const marker = '## Terraform plan - `dev`';
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo, issue_number: context.issue.number,
+            });
+            const existing = comments.find(
+              c => c.user.type === 'Bot' && c.body.startsWith(marker));
+
+            if (existing) {
+              // Update in place so a long-lived PR does not accumulate a wall
+              // of stale plans.
+              await github.rest.issues.updateComment({
+                ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo, issue_number: context.issue.number, body });
+            }
+
+      - name: Fail if the plan failed
+        if: steps.plan.outcome == 'failure'
+        run: |
+          echo "::error::terraform plan failed - see the PR comment"
+          exit 1
+
+  apply-dev:
+    name: Apply (dev)
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+       inputs.environment == 'dev' && inputs.apply)
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: dev
+      url: ${{ steps.outputs.outputs.dashboard_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: dev
+          terraform-version: ${{ env.TF_VERSION }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Apply
+        working-directory: infrastructure/terraform
+        env:
+          ARM_USE_OIDC: "true"
+          ARM_USE_AZUREAD: "true"
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_db_admin_password: ${{ secrets.DB_ADMIN_PASSWORD }}
+          TF_VAR_git_sha: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          terraform apply \
+            -var-file=environments/dev.tfvars \
+            -input=false -no-color -auto-approve -lock-timeout=5m
+
+      - name: Publish the outputs
+        id: outputs
+        working-directory: infrastructure/terraform
+        env:
+          ARM_USE_OIDC: "true"
+          ARM_USE_AZUREAD: "true"
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          echo "dashboard_url=$(terraform output -raw dashboard_url)" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Infrastructure applied - dev"
+            echo
+            echo "| Output | Value |"
+            echo "| --- | --- |"
+            terraform output -json \
+              | jq -r 'to_entries
+                       | map(select(.value.sensitive | not))
+                       | .[]
+                       | "| \(.key) | \(.value.value | tostring) |"'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Prod: plan, then a human approves, then the approved plan is applied.
+  # ---------------------------------------------------------------------------
+  plan-prod:
+    name: Plan (prod)
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'prod'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # `prod-plan` holds the same credentials as `prod` but has NO required
+    # reviewers - otherwise the approver would be asked to approve before they
+    # could see what they are approving.
+    environment: prod-plan
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: prod
+          terraform-version: ${{ env.TF_VERSION }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Plan to a file
+        working-directory: infrastructure/terraform
+        env:
+          ARM_USE_OIDC: "true"
+          ARM_USE_AZUREAD: "true"
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_db_admin_password: ${{ secrets.DB_ADMIN_PASSWORD }}
+          TF_VAR_git_sha: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          terraform plan \
+            -var-file=environments/prod.tfvars \
+            -input=false -no-color -lock-timeout=5m \
+            -out=tfplan.binary
+
+          terraform show -no-color tfplan.binary > tfplan.txt
+
+      - name: Summarise for the approver
+        working-directory: infrastructure/terraform
+        run: |
+          set -euo pipefail
+          {
+            echo "## Terraform plan - prod"
+            echo
+            echo "Commit \`${GITHUB_SHA:0:7}\`. Approve the **Apply (prod)** job to apply"
+            echo "*this exact plan* - it is not re-planned after approval."
+            echo
+            echo '<details><summary>Plan</summary>'
+            echo
+            echo '```terraform'
+            head -c 50000 tfplan.txt
+            echo '```'
+            echo
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The plan file embeds every value Terraform will write, including the
+      # database password - exactly like the state file it was planned against.
+      # One-day retention, and the repository must be private. If that is not
+      # acceptable, the alternative is re-planning inside the apply job and
+      # giving up the "apply what was reviewed" guarantee.
+      - name: Upload the approved plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-prod-${{ github.run_id }}
+          path: infrastructure/terraform/tfplan.binary
+          retention-days: 1
+          if-no-files-found: error
+
+  apply-prod:
+    name: Apply (prod)
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.environment == 'prod' && inputs.apply
+    needs: plan-prod
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: prod
+      url: ${{ steps.outputs.outputs.dashboard_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: prod
+          terraform-version: ${{ env.TF_VERSION }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Download the approved plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-prod-${{ github.run_id }}
+          path: infrastructure/terraform
+
+      # No -var-file and no -var here, deliberately: a saved plan already
+      # contains its variables, and Terraform refuses them on purpose. What was
+      # reviewed is what is applied.
+      - name: Apply the approved plan
+        working-directory: infrastructure/terraform
+        env:
+          ARM_USE_OIDC: "true"
+          ARM_USE_AZUREAD: "true"
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          terraform apply -input=false -no-color -lock-timeout=5m tfplan.binary
+
+      - name: Publish the outputs
+        id: outputs
+        working-directory: infrastructure/terraform
+        env:
+          ARM_USE_OIDC: "true"
+          ARM_USE_AZUREAD: "true"
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          echo "dashboard_url=$(terraform output -raw dashboard_url)" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Infrastructure applied - prod"
+            echo
+            echo "| Output | Value |"
+            echo "| --- | --- |"
+            terraform output -json \
+              | jq -r 'to_entries
+                       | map(select(.value.sensitive | not))
+                       | .[]
+                       | "| \(.key) | \(.value.value | tostring) |"'
+          } >> "$GITHUB_STEP_SUMMARY"

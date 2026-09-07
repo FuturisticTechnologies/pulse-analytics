@@ -1,0 +1,338 @@
+// ===========================================================================
+// PulseAnalytics - Power BI measure library
+//
+// Every measure below is the DAX equivalent of a definition in
+// docs/kpi-definitions.md and of the SQL in database/analytics/. Where a mart
+// already computes a figure, the measure aggregates the FACT rather than the
+// mart, so a Power BI slicer (region, channel, month) filters correctly - a
+// measure that reads a pre-aggregated mart cannot respond to a slicer on a
+// dimension the mart does not carry.
+//
+// Import these into the model as a dedicated "Measures" table.
+// Model relationships are documented in dashboards/powerbi/model.md.
+// ===========================================================================
+
+
+// ---------------------------------------------------------------------------
+// Core revenue and profit
+// ---------------------------------------------------------------------------
+
+// Revenue recognises COMPLETED orders only. Cancelled and returned orders stay
+// in the fact table (operations needs them) and are excluded here by the flag,
+// never by deleting rows.
+Revenue =
+CALCULATE (
+    SUM ( fact_orders[net_amount] ),
+    fact_orders[is_revenue] = TRUE
+)
+
+Gross Profit =
+CALCULATE (
+    SUM ( fact_orders[gross_profit] ),
+    fact_orders[is_revenue] = TRUE
+)
+
+COGS =
+CALCULATE (
+    SUM ( fact_orders[cost_amount] ),
+    fact_orders[is_revenue] = TRUE
+)
+
+Discounts =
+CALCULATE (
+    SUM ( fact_orders[discount_amount] ),
+    fact_orders[is_revenue] = TRUE
+)
+
+Gross Margin % =
+DIVIDE ( [Gross Profit], [Revenue] )      -- DIVIDE, never "/": blank, not an error, on zero
+
+Discount Rate % =
+DIVIDE ( [Discounts], [Revenue] + [Discounts] )
+
+
+// ---------------------------------------------------------------------------
+// Orders and basket
+// ---------------------------------------------------------------------------
+
+Orders =
+CALCULATE (
+    COUNTROWS ( fact_orders ),
+    fact_orders[is_revenue] = TRUE
+)
+
+Orders Placed = COUNTROWS ( fact_orders )   -- every status, for operations
+
+Cancelled Orders =
+CALCULATE ( COUNTROWS ( fact_orders ), fact_orders[is_cancelled] = TRUE )
+
+Cancellation Rate % =
+DIVIDE ( [Cancelled Orders], [Orders Placed] )
+
+Units Sold =
+CALCULATE ( SUM ( fact_orders[item_count] ), fact_orders[is_revenue] = TRUE )
+
+// AOV is computed at the ORDER grain. Averaging the line fact would answer a
+// different question (average line value) and be materially smaller.
+Average Order Value = DIVIDE ( [Revenue], [Orders] )
+
+Units per Order = DIVIDE ( [Units Sold], [Orders] )
+
+
+// ---------------------------------------------------------------------------
+// Time intelligence - all built on dim_date, the only marked date table
+// ---------------------------------------------------------------------------
+
+Revenue PY = CALCULATE ( [Revenue], SAMEPERIODLASTYEAR ( dim_date[date_value] ) )
+
+Revenue YoY % =
+VAR Previous = [Revenue PY]
+RETURN IF ( Previous > 0, DIVIDE ( [Revenue] - Previous, Previous ) )
+
+Revenue PM = CALCULATE ( [Revenue], DATEADD ( dim_date[date_value], -1, MONTH ) )
+
+Revenue MoM % =
+VAR Previous = [Revenue PM]
+RETURN IF ( Previous > 0, DIVIDE ( [Revenue] - Previous, Previous ) )
+
+Revenue MTD = TOTALMTD ( [Revenue], dim_date[date_value] )
+Revenue QTD = TOTALQTD ( [Revenue], dim_date[date_value] )
+Revenue YTD = TOTALYTD ( [Revenue], dim_date[date_value] )
+
+// 7-day moving average: kills weekday noise so an operator reacts to signal.
+Revenue MA7 =
+AVERAGEX (
+    DATESINPERIOD ( dim_date[date_value], MAX ( dim_date[date_value] ), -7, DAY ),
+    [Revenue]
+)
+
+Revenue Rolling 90d =
+CALCULATE (
+    [Revenue],
+    DATESINPERIOD ( dim_date[date_value], MAX ( dim_date[date_value] ), -90, DAY )
+)
+
+Revenue Prior 90d =
+CALCULATE (
+    [Revenue],
+    DATESINPERIOD (
+        dim_date[date_value],
+        MAX ( dim_date[date_value] ) - 90,
+        -90,
+        DAY
+    )
+)
+
+Revenue 90d Change % =
+VAR Previous = [Revenue Prior 90d]
+RETURN IF ( Previous > 0, DIVIDE ( [Revenue Rolling 90d] - Previous, Previous ) )
+
+
+// ---------------------------------------------------------------------------
+// Customers
+// ---------------------------------------------------------------------------
+
+Active Customers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[customer_key] ),
+    fact_orders[is_revenue] = TRUE
+)
+
+New Customers =
+CALCULATE (
+    DISTINCTCOUNT ( fact_orders[customer_key] ),
+    fact_orders[is_revenue] = TRUE,
+    fact_orders[is_first_order] = TRUE
+)
+
+Returning Customers = [Active Customers] - [New Customers]
+
+Repeat Rate % = DIVIDE ( [Returning Customers], [Active Customers] )
+
+Revenue per Customer = DIVIDE ( [Revenue], [Active Customers] )
+
+// Recency against the LATEST DATE IN THE DATA, not TODAY(). Anchoring to the
+// wall clock would make every screenshot of this report irreproducible and
+// would show every customer as churned the moment the data stops refreshing.
+As Of Date = MAX ( fact_orders[order_date] )
+
+Customers At Risk =
+VAR AsOf = [As Of Date]
+RETURN
+    CALCULATE (
+        COUNTROWS ( mart_customer_360 ),
+        FILTER (
+            mart_customer_360,
+            mart_customer_360[last_order_date] < AsOf - 90
+                && mart_customer_360[last_order_date] >= AsOf - 180
+        )
+    )
+
+Churned Customers =
+VAR AsOf = [As Of Date]
+RETURN
+    CALCULATE (
+        COUNTROWS ( mart_customer_360 ),
+        FILTER ( mart_customer_360, mart_customer_360[last_order_date] < AsOf - 90 )
+    )
+
+Churn Rate % =
+DIVIDE (
+    [Churned Customers],
+    CALCULATE ( COUNTROWS ( mart_customer_360 ), mart_customer_360[orders] > 0 )
+)
+
+Average Lifetime Value =
+CALCULATE (
+    AVERAGE ( mart_customer_360[lifetime_revenue] ),
+    mart_customer_360[orders] > 0
+)
+
+
+// ---------------------------------------------------------------------------
+// Marketing
+// ---------------------------------------------------------------------------
+
+Marketing Spend = SUM ( dim_campaign[spend] )
+
+Attributed Revenue =
+CALCULATE (
+    [Revenue],
+    fact_orders[campaign_key] <> -1
+)
+
+ROAS = DIVIDE ( [Attributed Revenue], [Marketing Spend] )
+
+Attributed Gross Profit =
+CALCULATE ( [Gross Profit], fact_orders[campaign_key] <> -1 )
+
+Profit ROAS = DIVIDE ( [Attributed Gross Profit], [Marketing Spend] )
+
+Net Marketing Contribution = [Attributed Gross Profit] - [Marketing Spend]
+
+Attributed New Customers =
+CALCULATE ( [New Customers], fact_orders[campaign_key] <> -1 )
+
+CAC = DIVIDE ( [Marketing Spend], [Attributed New Customers] )
+
+LTV to CAC = DIVIDE ( [Average Lifetime Value], [CAC] )
+
+
+// ---------------------------------------------------------------------------
+// Payments
+// ---------------------------------------------------------------------------
+
+Payment Attempts = COUNTROWS ( fact_payments )
+
+Payment Failures =
+CALCULATE ( COUNTROWS ( fact_payments ), fact_payments[is_failed] = TRUE )
+
+// Two rates on purpose. Attempt failure rate measures the GATEWAY; order
+// success rate measures the CUSTOMER EXPERIENCE (a decline that succeeds on
+// retry is invisible to the customer). One ambiguous "success rate" would be
+// argued about in every review.
+Attempt Failure Rate % = DIVIDE ( [Payment Failures], [Payment Attempts] )
+
+Orders Paid =
+CALCULATE (
+    DISTINCTCOUNT ( fact_payments[order_id] ),
+    fact_payments[is_final_attempt] = TRUE,
+    fact_payments[is_captured] = TRUE
+)
+
+Order Payment Success Rate % =
+DIVIDE ( [Orders Paid], DISTINCTCOUNT ( fact_payments[order_id] ) )
+
+Amount At Risk =
+CALCULATE ( SUM ( fact_payments[amount] ), fact_payments[is_failed] = TRUE )
+
+
+// ---------------------------------------------------------------------------
+// Inventory - SEMI-ADDITIVE
+// ---------------------------------------------------------------------------
+
+// Stock balances sum across products but NOT across dates. LASTDATE forces the
+// latest snapshot in the current filter context; a plain SUM would report stock
+// the business never held, which is the single most common inventory-reporting
+// bug.
+Stock On Hand =
+CALCULATE (
+    SUM ( fact_inventory[on_hand_units] ),
+    LASTDATE ( dim_date[date_value] )
+)
+
+Stock Value At Cost =
+CALCULATE (
+    SUM ( fact_inventory[on_hand_value_at_cost] ),
+    LASTDATE ( dim_date[date_value] )
+)
+
+Products Stocked Out =
+CALCULATE (
+    COUNTROWS ( fact_inventory ),
+    fact_inventory[is_stockout] = TRUE,
+    LASTDATE ( dim_date[date_value] )
+)
+
+Products Below Reorder =
+CALCULATE (
+    COUNTROWS ( fact_inventory ),
+    fact_inventory[is_below_reorder] = TRUE,
+    LASTDATE ( dim_date[date_value] )
+)
+
+Stockout Rate % =
+DIVIDE (
+    CALCULATE ( COUNTROWS ( fact_inventory ), fact_inventory[is_stockout] = TRUE ),
+    COUNTROWS ( fact_inventory )
+)
+
+Estimated Lost Revenue = SUM ( fact_inventory[estimated_lost_revenue] )
+
+
+// ---------------------------------------------------------------------------
+// Behaviour
+// ---------------------------------------------------------------------------
+
+Sessions = DISTINCTCOUNT ( fact_customer_events[session_id] )
+
+Converting Sessions =
+CALCULATE (
+    DISTINCTCOUNT ( fact_customer_events[session_id] ),
+    fact_customer_events[is_conversion] = TRUE
+)
+
+Conversion Rate % = DIVIDE ( [Converting Sessions], [Sessions] )
+
+Cart Sessions =
+CALCULATE (
+    DISTINCTCOUNT ( fact_customer_events[session_id] ),
+    fact_customer_events[funnel_step] >= 5
+)
+
+Cart Abandonment % = 1 - DIVIDE ( [Converting Sessions], [Cart Sessions] )
+
+
+// ---------------------------------------------------------------------------
+// Formatting helpers for cards
+// ---------------------------------------------------------------------------
+
+Revenue Label =
+VAR Value = [Revenue]
+RETURN
+    SWITCH (
+        TRUE (),
+        Value >= 1000000, FORMAT ( Value / 1000000, "$#,0.0" ) & "M",
+        Value >= 1000,    FORMAT ( Value / 1000,    "$#,0.0" ) & "K",
+        FORMAT ( Value, "$#,0" )
+    )
+
+// Arrow plus sign carry the direction; colour only reinforces it, so the card
+// still reads in greyscale and for a colour-blind viewer.
+Revenue YoY Label =
+VAR Change = [Revenue YoY %]
+RETURN
+    IF (
+        NOT ISBLANK ( Change ),
+        IF ( Change >= 0, "▲ ", "▼ " ) & FORMAT ( ABS ( Change ), "0.0%" )
+    )
