@@ -1,0 +1,290 @@
+name: Deploy application
+
+# Builds one image and promotes that exact image through dev and then prod.
+#
+#   push to main        -> build, deploy to dev
+#   manual dispatch     -> deploy a chosen tag to a chosen environment
+#   release published   -> promote the release commit's image to prod
+#
+# One image, built once. Prod never gets a rebuild: rebuilding produces a
+# different artefact from the one dev was verified on, and every "works in dev,
+# fails in prod" mystery starts there.
+#
+# Rollback is the same path with an older tag:
+#   Actions -> Deploy application -> Run workflow
+#     environment: prod
+#     image_tag:   <the SHA that was good>
+# The tag is already in the registry, so a rollback is a deploy, not a rebuild -
+# minutes, not tens of minutes, at the moment you can least afford to wait.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pulse/**"
+      - "etl/**"
+      - "streaming/**"
+      - "analytics/**"
+      - "dashboards/**"
+      - "database/**"
+      - "data-generator/**"
+      - "scripts/**"
+      - "Dockerfile"
+      - "requirements*.txt"
+      - ".github/workflows/deploy-application.yml"
+      - ".github/workflows/_deploy-environment.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy to
+        required: true
+        type: choice
+        options: [dev, prod]
+        default: dev
+      image_tag:
+        description: >-
+          Existing image tag to deploy (a git SHA). Leave blank to build from
+          this ref. Set it to roll back.
+        required: false
+        type: string
+        default: ""
+      skip_migrations:
+        description: Skip the schema migration step
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+  packages: read
+
+concurrency:
+  group: app-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  plan:
+    name: Decide what to deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      image_tag: ${{ steps.decide.outputs.image_tag }}
+      needs_build: ${{ steps.decide.outputs.needs_build }}
+      target: ${{ steps.decide.outputs.target }}
+      run_migrations: ${{ steps.decide.outputs.run_migrations }}
+    steps:
+      - id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.image_tag }}
+          INPUT_ENV: ${{ inputs.environment }}
+          SKIP_MIGRATIONS: ${{ inputs.skip_migrations }}
+        run: |
+          set -euo pipefail
+
+          case "$EVENT" in
+            push)
+              # Every commit on main goes to dev, tagged with its own SHA.
+              tag="${GITHUB_SHA}"; build=true; target=dev ;;
+            release)
+              # A release promotes the image built for that commit. If the
+              # commit never reached dev there is nothing to promote, and the
+              # promotion step will fail loudly rather than rebuild silently.
+              tag="${GITHUB_SHA}"; build=false; target=prod ;;
+            workflow_dispatch)
+              target="${INPUT_ENV}"
+              if [ -n "${INPUT_TAG}" ]; then
+                tag="${INPUT_TAG}"; build=false      # rollback / redeploy
+              elif [ "$target" = "prod" ]; then
+                tag="${GITHUB_SHA}"; build=false     # promote, never rebuild
+              else
+                tag="${GITHUB_SHA}"; build=true
+              fi ;;
+            *)
+              echo "::error::unhandled event $EVENT"; exit 1 ;;
+          esac
+
+          migrations=true
+          [ "${SKIP_MIGRATIONS:-false}" = "true" ] && migrations=false
+
+          {
+            echo "image_tag=$tag"
+            echo "needs_build=$build"
+            echo "target=$target"
+            echo "run_migrations=$migrations"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Deployment plan"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Trigger | \`$EVENT\` |"
+            echo "| Target | **$target** |"
+            echo "| Image tag | \`$tag\` |"
+            echo "| Build | $build |"
+            echo "| Migrations | $migrations |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Build once, into the dev registry. Prod imports from here.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build and push
+    needs: plan
+    if: needs.plan.outputs.needs_build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    outputs:
+      # The digest, not the tag: a tag is a mutable pointer, a digest names the
+      # exact bytes. It is what an audit answers "what actually ran" with.
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve the registry
+        id: registry
+        env:
+          # Passed through the environment rather than interpolated into the
+          # script body. `vars` are admin-set so the risk is low, but a value
+          # containing shell metacharacters would otherwise execute here.
+          LOGIN_SERVER: ${{ vars.REGISTRY_LOGIN_SERVER }}
+        run: |
+          set -euo pipefail
+          # vars, not Terraform state: the build job has no reason to hold a
+          # state lock, and the registry name never changes between deploys.
+          if [ -z "${LOGIN_SERVER:-}" ]; then
+            echo "::error::REGISTRY_LOGIN_SERVER is not set on the dev environment - run scripts/bootstrap_azure.sh"
+            exit 1
+          fi
+          {
+            echo "login_server=${LOGIN_SERVER}"
+            echo "name=${LOGIN_SERVER%%.azurecr.io}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to the registry
+        run: az acr login --name "${{ steps.registry.outputs.name }}"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # The SHA is the deployable tag. `main` is a convenience pointer for
+          # humans reading the registry - nothing ever deploys from it, because
+          # a moving tag makes a deployment unreproducible.
+          tags: |
+            ${{ steps.registry.outputs.login_server }}/pulse/platform:${{ needs.plan.outputs.image_tag }}
+            ${{ steps.registry.outputs.login_server }}/pulse/platform:main
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.created=${{ github.event.repository.updated_at }}
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.registry.outputs.login_server }}/pulse/platform:${{ needs.plan.outputs.image_tag }}
+          format: table
+          exit-code: "1"
+          severity: CRITICAL
+          # ignore-unfixed: a CRITICAL with no available patch cannot be acted
+          # on, and blocking every deploy on it teaches people to bypass the
+          # gate. Fixable criticals stop the pipeline; the rest are reported.
+          ignore-unfixed: true
+
+      - name: Record what was built
+        run: |
+          {
+            echo "## Image built"
+            echo
+            echo '```'
+            echo "${{ steps.registry.outputs.login_server }}/pulse/platform:${{ needs.plan.outputs.image_tag }}"
+            echo '```'
+            echo
+            echo "Digest: \`${{ steps.push.outputs.digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  deploy-dev:
+    name: Dev
+    needs: [plan, build]
+    # always(): `build` is skipped on the rollback and promote paths, and a
+    # skipped dependency would otherwise skip this job too.
+    if: >-
+      always() &&
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.target == 'dev' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
+    uses: ./.github/workflows/_deploy-environment.yml
+    with:
+      environment: dev
+      image_tag: ${{ needs.plan.outputs.image_tag }}
+      run_migrations: ${{ needs.plan.outputs.run_migrations == 'true' }}
+    secrets: inherit
+
+  deploy-prod:
+    name: Prod
+    needs: [plan, build]
+    if: >-
+      always() &&
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.target == 'prod' &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
+    uses: ./.github/workflows/_deploy-environment.yml
+    with:
+      environment: prod
+      image_tag: ${{ needs.plan.outputs.image_tag }}
+      # Promote the exact image dev ran, rather than building a second one.
+      source_environment: dev
+      run_migrations: ${{ needs.plan.outputs.run_migrations == 'true' }}
+    secrets: inherit
+
+  # ---------------------------------------------------------------------------
+  report:
+    name: Report
+    needs: [plan, deploy-dev, deploy-prod]
+    if: always() && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Outcome
+        run: |
+          set -euo pipefail
+          target="${{ needs.plan.outputs.target }}"
+          dev="${{ needs.deploy-dev.result }}"
+          prod="${{ needs.deploy-prod.result }}"
+          outcome="skipped"
+          [ "$target" = "dev" ]  && outcome="$dev"
+          [ "$target" = "prod" ] && outcome="$prod"
+
+          {
+            echo "## $target deployment: $outcome"
+            echo
+            echo "Image \`${{ needs.plan.outputs.image_tag }}\`"
+            if [ "$outcome" != "success" ]; then
+              echo
+              echo "To roll back: **Run workflow** with environment \`$target\` and"
+              echo "\`image_tag\` set to the last good SHA. The image is already in the"
+              echo "registry, so it redeploys without a rebuild."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [ "$outcome" = "success" ] || [ "$outcome" = "skipped" ]
