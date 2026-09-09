@@ -37,6 +37,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -552,10 +553,27 @@ def git_retrying(*args, env=None):
         path = line.strip()
         if not path:
             continue
-        full = os.path.join(REPO, path)
-        if os.path.isfile(full):
-            os.remove(full)
+        remove_stubbornly(os.path.join(REPO, path))
     git(*args, env=env)
+
+
+def remove_stubbornly(full, attempts=20):
+    """Delete a file Windows may still have open.
+
+    A large binary written a moment ago is often still held by the search
+    indexer or an on-access virus scan, which surfaces as WinError 32. Waiting
+    it out is the only reliable fix, and a few seconds is enough in practice.
+    """
+    for attempt in range(attempts):
+        if not os.path.isfile(full):
+            return
+        try:
+            os.remove(full)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.5)
 
 
 def tracked_files():
@@ -737,9 +755,7 @@ def build(dry_run=False, force=False):
     git("checkout", "--orphan", DEV_BRANCH)
     git("rm", "-rf", "--cached", "-q", ".")
     for path in files:
-        full = os.path.join(REPO, path)
-        if os.path.exists(full):
-            os.remove(full)
+        remove_stubbornly(os.path.join(REPO, path))
 
     root_when = dt.datetime(2026, 3, 2, 9, 30)
     write(".gitkeep-development", b"")
