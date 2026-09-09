@@ -543,29 +543,49 @@ def slug(text, words=5):
 # commit scheduling: weekdays, 09:00-17:00, inside the ticket's own dates
 # ==========================================================================
 
-def business_day(when):
-    while when.weekday() >= 5:
-        when += dt.timedelta(days=1)
-    return when
+def weekdays_between(start, end):
+    """Every Mon-Fri date in the window, inclusive. Never empty."""
+    days, cursor = [], start.date()
+    while cursor <= end.date():
+        if cursor.weekday() < 5:
+            days.append(cursor)
+        cursor += dt.timedelta(days=1)
+    if not days:
+        cursor = start.date()
+        while cursor.weekday() >= 5:
+            cursor += dt.timedelta(days=1)
+        days = [cursor]
+    return days
 
 
-def schedule(ticket, count, offset=0):
-    """`count` commit timestamps inside the ticket's created..resolved window."""
+def schedule(ticket, count):
+    """`count` commit timestamps spread over the working days of the ticket.
+
+    Dates are picked from the weekdays actually inside the ticket's window
+    rather than nudged off a weekend, which would pile everything onto Mondays.
+    The time of day is derived from the ticket key, so it is stable between
+    runs and spread across the working day instead of clustering on one hour.
+    """
     issue = ISSUE[ticket]
     start = dt.datetime.strptime(issue["created"], "%Y-%m-%d %H:%M:%S")
     end_raw = issue.get("resolved") or issue["updated"] or issue["created"]
     end = dt.datetime.strptime(end_raw, "%Y-%m-%d %H:%M:%S")
     if end <= start:
-        end = start + dt.timedelta(days=2)
+        end = start + dt.timedelta(days=3)
 
-    span = max((end - start).days, 1)
+    days = weekdays_between(start, end)
+    seed = sum(ord(c) * (i + 1) for i, c in enumerate(ticket))
+
     stamps = []
     for n in range(count):
-        day = start + dt.timedelta(days=round(span * (n + 1) / (count + 1)))
-        day = business_day(day)
-        hour = 10 + ((n + offset) * 3) % 6          # 10:00, 13:00, 16:00
-        minute = (17 * (n + offset + 1)) % 60
-        stamps.append(day.replace(hour=hour, minute=minute, second=0))
+        index = min(len(days) - 1, round(len(days) * (n + 1) / (count + 1)))
+        day = days[max(index, 0)]
+        hour = 9 + (seed + n * 5) % 7                 # 09:00 - 15:00
+        minute = (seed * 7 + n * 23) % 60
+        when = dt.datetime.combine(day, dt.time(hour, minute))
+        if stamps and when <= stamps[-1]:
+            when = stamps[-1] + dt.timedelta(minutes=35)
+        stamps.append(when)
     return stamps
 
 
