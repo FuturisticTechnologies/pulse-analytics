@@ -154,6 +154,44 @@ channel, which keeps a thread's replies directly under their parent rather than
 scattering them across days of other traffic — the alert-fatigue thread and the
 `ops.stream_events` incident still read as single conversations.
 
+## Git history
+
+`build_git_history.py` reconstructs the repository as it would have been built,
+02 Mar – 09 Sep 2026:
+
+| | |
+| --- | --- |
+| `development` | integration branch, 229 commits, 135 of them merges |
+| `pulse/PULSE-nn-<slug>` | 77 working branches, one per ticket — **kept, never deleted** |
+
+Each working branch is cut off `development`, carries commits by the ticket's
+assignee, takes a **merge of `development` back in** when development has moved
+on underneath it (58 of the 77 did), and is then merged in with `--no-ff`. The
+merge history therefore runs in both directions.
+
+```
+python project-management/build_git_history.py --dry-run   # plan only
+python project-management/build_git_history.py --force     # rebuild
+```
+
+**Safety.** `main` is never checked out, moved or modified by the script, and
+nothing is pushed. File content is read from the `main` commit rather than the
+working tree, and the build asserts the final `development` tree is **byte
+identical** to `main`'s — so the reconstruction cannot lose, add or alter a
+file. All 188 tracked files are accounted for; the build fails if one is not.
+
+**Authors** are the real addresses, and joining dates hold: Neha's first commit
+is after 15 Jun, Amit's after 24 Aug. Every commit outside `main` falls on a
+weekday between 09:00 and 17:00, matching the Jira and Slack artefacts.
+
+**The bug branches carry real diffs.** Six tickets fix a file introduced by an
+earlier commit, so the earlier commit writes the pre-fix state and the bug
+commit restores the final one — PULSE-23 (dtype inference), PULSE-29 (de-dupe
+ordering), PULSE-56 (AOV denominator), PULSE-74 (cohort membership), PULSE-85
+(`DROP`+`CREATE` on `ops.*`) and PULSE-101 (churn feature snapshot). The build
+fails if a pre-fix pattern stops matching, so none of them can silently become
+an empty diff.
+
 ## Structure
 
 **12 epics.** PULSE-1 to PULSE-11 were cut in the inception workshop on
