@@ -1,0 +1,14 @@
+{
+  "name": "pulseanalytics-docs",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Offline toolchain that renders the architecture and BRD documents to PDF.",
+  "scripts": {
+    "build": "node render.js",
+    "verify": "node verify.js"
+  },
+  "dependencies": {
+    "mermaid": "^11.4.1",
+    "puppeteer-core": "^23.11.1"
+  }
+}

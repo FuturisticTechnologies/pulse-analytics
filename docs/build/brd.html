@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>PulseAnalytics — Business Requirements Document</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main id="doc">
+
+<!-- ==================================================================== -->
+<section class="cover">
+  <div class="eyebrow">Business Requirements Document</div>
+  <h1>PulseAnalytics</h1>
+  <div class="subtitle">Business objectives, scope, requirements<br>and acceptance criteria</div>
+  <div class="rule"></div>
+  <table class="doc-control">
+    <tr><td>Document</td><td><strong>BRD-PA-001</strong> — Business Requirements Document</td></tr>
+    <tr><td>Version</td><td>2.0</td></tr>
+    <tr><td>Status</td><td>Approved — Release 1 delivered and verified</td></tr>
+    <tr><td>Date</td><td>27 August 2026</td></tr>
+    <tr><td>Business owner</td><td>Commercial Director</td></tr>
+    <tr><td>Author</td><td>Data Platform team</td></tr>
+    <tr><td>Audience</td><td>Executive sponsor, business stakeholders, delivery team, QA</td></tr>
+    <tr><td>Companion</td><td>SAD-PA-001 — Software Architecture Document</td></tr>
+  </table>
+  <p class="legend" style="margin-top:12mm">
+    This document states what the business needs and how each need is verified.
+    Requirements delivered with a limitation are marked as such and the
+    limitation is described — a requirement reported as met when it is partly
+    met is worse than one reported as outstanding.
+  </p>
+</section>
+
+<!-- ==================================================================== -->
+<section class="toc">
+<h1 class="plain">Contents</h1>
+<ol>
+  <li class="toc-1"><span class="n">1</span><span>Executive summary</span><span class="fill"></span><span class="pg" data-toc-for="b-exec"></span></li>
+  <li class="toc-1"><span class="n">2</span><span>Business context</span><span class="fill"></span><span class="pg" data-toc-for="b-context"></span></li>
+  <li class="toc-2"><span class="n">2.1</span><span>Problem statement</span><span class="fill"></span><span class="pg" data-toc-for="b-problem"></span></li>
+  <li class="toc-2"><span class="n">2.2</span><span>Current state</span><span class="fill"></span><span class="pg" data-toc-for="b-asis"></span></li>
+  <li class="toc-2"><span class="n">2.3</span><span>Target state</span><span class="fill"></span><span class="pg" data-toc-for="b-tobe"></span></li>
+  <li class="toc-1"><span class="n">3</span><span>Objectives and success measures</span><span class="fill"></span><span class="pg" data-toc-for="b-objectives"></span></li>
+  <li class="toc-1"><span class="n">4</span><span>Stakeholders</span><span class="fill"></span><span class="pg" data-toc-for="b-stakeholders"></span></li>
+  <li class="toc-1"><span class="n">5</span><span>Scope</span><span class="fill"></span><span class="pg" data-toc-for="b-scope"></span></li>
+  <li class="toc-1"><span class="n">6</span><span>Use cases</span><span class="fill"></span><span class="pg" data-toc-for="b-usecases"></span></li>
+  <li class="toc-2"><span class="n">6.1</span><span>Use case diagram</span><span class="fill"></span><span class="pg" data-toc-for="b-ucdiagram"></span></li>
+  <li class="toc-2"><span class="n">6.2</span><span>Use case specifications</span><span class="fill"></span><span class="pg" data-toc-for="b-ucspecs"></span></li>
+  <li class="toc-1"><span class="n">7</span><span>Business processes</span><span class="fill"></span><span class="pg" data-toc-for="b-processes"></span></li>
+  <li class="toc-1"><span class="n">8</span><span>Business requirements</span><span class="fill"></span><span class="pg" data-toc-for="b-br"></span></li>
+  <li class="toc-1"><span class="n">9</span><span>Functional requirements</span><span class="fill"></span><span class="pg" data-toc-for="b-fr"></span></li>
+  <li class="toc-1"><span class="n">10</span><span>Non-functional requirements</span><span class="fill"></span><span class="pg" data-toc-for="b-nfr"></span></li>
+  <li class="toc-1"><span class="n">11</span><span>Data requirements</span><span class="fill"></span><span class="pg" data-toc-for="b-data"></span></li>
+  <li class="toc-2"><span class="n">11.1</span><span>Conceptual model</span><span class="fill"></span><span class="pg" data-toc-for="b-conceptual"></span></li>
+  <li class="toc-2"><span class="n">11.2</span><span>Agreed metric definitions</span><span class="fill"></span><span class="pg" data-toc-for="b-metrics"></span></li>
+  <li class="toc-1"><span class="n">12</span><span>Reporting requirements</span><span class="fill"></span><span class="pg" data-toc-for="b-reporting"></span></li>
+  <li class="toc-1"><span class="n">13</span><span>Assumptions, constraints and dependencies</span><span class="fill"></span><span class="pg" data-toc-for="b-assumptions"></span></li>
+  <li class="toc-1"><span class="n">14</span><span>Risks</span><span class="fill"></span><span class="pg" data-toc-for="b-risks"></span></li>
+  <li class="toc-1"><span class="n">15</span><span>Acceptance criteria</span><span class="fill"></span><span class="pg" data-toc-for="b-acceptance"></span></li>
+  <li class="toc-1"><span class="n">16</span><span>Traceability matrix</span><span class="fill"></span><span class="pg" data-toc-for="b-trace"></span></li>
+  <li class="toc-1"><span class="n">17</span><span>Glossary and sign-off</span><span class="fill"></span><span class="pg" data-toc-for="b-glossary"></span></li>
+</ol>
+</section>
+
+<!-- ==================================================================== -->
+<h1 id="b-exec">Executive summary</h1>
+<p class="lead">
+  The business could not agree on its own revenue figure. Three teams produced
+  three numbers from three exports, and meetings were spent reconciling them
+  rather than acting on them. PulseAnalytics exists to make one number, agreed
+  once, available to everyone who needs it — and to make it trustworthy enough
+  that nobody rebuilds it by hand.
+</p>
+<p>
+  Release 1 delivers an automated nightly warehouse, five role-specific
+  dashboards, a real-time trading and payments view, seven analytical models,
+  and a data-quality gate that holds publication when the data is not safe to
+  publish. Every metric is defined once and consumed everywhere from that
+  definition.
+</p>
+<table class="kv">
+  <tr><td>Requirements delivered</td><td><strong>12 of 12</strong> business requirements; 38 of 38 functional requirements. Three are delivered with a stated limitation (BR-07, BR-09, NFR-14).</td></tr>
+  <tr><td>Verification</td><td>223 automated tests; 64 data-quality checks; every acceptance criterion mapped to an executable check in section 16.</td></tr>
+  <tr><td>Principal residual risk</td><td>Marketing incrementality is a before/after proxy, not an experiment. It informs budget decisions and is labelled as approximate wherever it appears.</td></tr>
+  <tr><td>Recommendation</td><td>Accept Release 1. Prioritise a geo-holdout capability and source-side change capture for Release 2.</td></tr>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-context">Business context</h1>
+
+<h2 id="b-problem">Problem statement</h2>
+<p>
+  The organisation trades through web, mobile, marketplace and physical
+  channels across six regions. Transactional data exists and is accurate at
+  source. The problem is not missing data; it is that no shared, trusted,
+  timely view of it exists.
+</p>
+<table class="data">
+  <caption>Observed problems and their business consequence</caption>
+  <thead><tr><th class="id">ID</th><th style="width:52mm">Problem</th><th>Consequence</th></tr></thead>
+  <tbody>
+    <tr><td class="id">P-01</td><td>Three teams quote three different revenue figures</td><td>Decision meetings are spent reconciling numbers instead of deciding. No definition is written down, so each reconciliation starts again.</td></tr>
+    <tr><td class="id">P-02</td><td>Reporting is manual and takes 5–10 working days</td><td>Month-end decisions are made on data that is already stale. Nobody asks exploratory questions because each one costs a day.</td></tr>
+    <tr><td class="id">P-03</td><td>Payment failures are discovered the next morning</td><td>A gateway degradation on a Friday evening costs a full night of orders before anyone knows.</td></tr>
+    <tr><td class="id">P-04</td><td>Churn is visible only in hindsight</td><td>Retention effort is spent on customers who have already gone, and the customers who are about to go are not identified.</td></tr>
+    <tr><td class="id">P-05</td><td>Marketing return is quoted without a stated attribution basis</td><td>Budget is allocated on a number nobody can define. Upper-funnel channels are systematically under-funded.</td></tr>
+    <tr><td class="id">P-06</td><td>Replenishment is decided on judgement</td><td>Simultaneous stockouts on fast lines and overstock on slow ones; working capital is trapped where it earns nothing.</td></tr>
+    <tr><td class="id">P-07</td><td>No way to tell a data problem from a business problem</td><td>When a number looks wrong, there is no evidence to say whether the business changed or the pipeline broke, so the number is distrusted either way.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="b-asis">Current state</h2>
+<figure>
+  <div class="mermaid" data-diagram="asIs"></div>
+  <figcaption>Current-state process — answering a commercial question
+    <span class="desc">Every red step is manual. The loop between reconciliation and re-export is where most of the 5–10 days is spent.</span>
+  </figcaption>
+</figure>
+
+<h2 id="b-tobe">Target state</h2>
+<figure>
+  <div class="mermaid" data-diagram="toBe"></div>
+  <figcaption>Target-state process — the platform answers the question
+    <span class="desc">
+      The quality gate is the decisive addition. When the data is not safe to
+      publish, yesterday's figures stand and someone is told — rather than
+      today's wrong figures being published silently.
+    </span>
+  </figcaption>
+</figure>
+
+<!-- ==================================================================== -->
+<h1 id="b-objectives">Objectives and success measures</h1>
+<table class="data">
+  <caption>Business objectives with measurable success criteria</caption>
+  <thead><tr><th class="id">ID</th><th style="width:44mm">Objective</th><th style="width:40mm">Success measure</th><th>Outcome</th></tr></thead>
+  <tbody>
+    <tr><td class="id">OBJ-01</td><td>One agreed definition for every headline metric</td><td>Zero metrics with more than one implementation that can disagree</td><td><span class="pill done">Met</span> Definitions written once; five reconciliation checks prove the implementations agree on every run.</td></tr>
+    <tr><td class="id">OBJ-02</td><td>Reduce time-to-answer for a standard commercial question</td><td>From 5–10 working days to same day</td><td><span class="pill done">Met</span> Warehouse rebuilds unattended in ~15 s; dashboards are open on demand.</td></tr>
+    <tr><td class="id">OBJ-03</td><td>Detect payment failure within minutes, not overnight</td><td>Failure rate visible within 5 minutes of occurrence</td><td><span class="pill done">Met</span> Rolling window recomputed every 5 s; alert feed on the real-time page.</td></tr>
+    <tr><td class="id">OBJ-04</td><td>Identify customers at risk before they leave</td><td>A ranked, actionable list of currently-active customers</td><td><span class="pill done">Met</span> Propensity model trained on a rewound snapshot; list ordered by revenue at risk.</td></tr>
+    <tr><td class="id">OBJ-05</td><td>Allocate marketing budget on a defensible basis</td><td>Return stated with its attribution basis; alternatives shown</td><td><span class="pill done">Met</span> Five attribution models published side by side; the shipped basis is labelled on every surface.</td></tr>
+    <tr><td class="id">OBJ-06</td><td>Release trapped working capital</td><td>A prioritised reorder list and a quantified overstock figure</td><td><span class="pill done">Met</span> Safety stock and reorder points derived from measured demand variability.</td></tr>
+    <tr><td class="id">OBJ-07</td><td>Make data trustworthy enough to act on without re-checking</td><td>Publication blocked when quality fails; quality visible to consumers</td><td><span class="pill done">Met</span> 64 checks; error-severity failure returns a distinct exit code; results surfaced on the Operations page.</td></tr>
+    <tr><td class="id">OBJ-08</td><td>Any reported figure can be reproduced later</td><td>A figure quoted today is re-derivable from the same dataset in six months</td><td><span class="pill done">Met</span> Deterministic generation and analysis anchored to the data rather than the clock.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-stakeholders">Stakeholders</h1>
+<table class="data">
+  <caption>Stakeholders and their interest in the platform</caption>
+  <thead><tr><th style="width:38mm">Stakeholder</th><th style="width:18mm">Role</th><th>Primary interest and the surface that serves it</th></tr></thead>
+  <tbody>
+    <tr><td>Commercial Director</td><td>Sponsor / <strong>A</strong></td><td>Is the business healthy and what changed — Executive dashboard.</td></tr>
+    <tr><td>Head of Sales &amp; Merchandising</td><td><strong>R</strong></td><td>What sold, why the number moved, what to stock — Sales dashboard, product performance.</td></tr>
+    <tr><td>Marketing Manager</td><td><strong>R</strong></td><td>What the spend bought; where to move budget — Marketing dashboard, attribution comparison.</td></tr>
+    <tr><td>Head of Customer / CRM</td><td><strong>R</strong></td><td>Who is valuable, who is leaving, who to contact — Customer dashboard, retention call list.</td></tr>
+    <tr><td>Operations Manager</td><td><strong>R</strong></td><td>Payments, stock and pipeline health — Operations and Real-time dashboards.</td></tr>
+    <tr><td>Finance Analyst</td><td><strong>C</strong></td><td>Reconciliation to the ledger; agreed revenue and margin definitions.</td></tr>
+    <tr><td>Data Platform team</td><td><strong>R</strong></td><td>Build and operate the platform; own the definitions.</td></tr>
+    <tr><td>Data Protection Officer</td><td><strong>C</strong></td><td>Personal data handling and retention.</td></tr>
+    <tr><td>IT Security</td><td><strong>C</strong></td><td>Credential handling, network exposure, deployment controls.</td></tr>
+    <tr><td>Executive team</td><td><strong>I</strong></td><td>Consumes the agreed figures.</td></tr>
+  </tbody>
+</table>
+<p class="legend">R = responsible · A = accountable · C = consulted · I = informed.</p>
+
+<!-- ==================================================================== -->
+<h1 id="b-scope">Scope</h1>
+<figure>
+  <div class="mermaid" data-diagram="scopeMap"></div>
+  <figcaption>Scope of Release 1
+    <span class="desc">Amber items are delivered but carry a limitation that is stated wherever the figure appears. Grey items are explicitly excluded.</span>
+  </figcaption>
+</figure>
+<table class="data">
+  <caption>Scope boundaries and the reason for each exclusion</caption>
+  <thead><tr><th style="width:52mm">Excluded</th><th>Reason</th></tr></thead>
+  <tbody>
+    <tr><td>Write-back to source systems</td><td>The platform is read-only by design. Write-back makes it part of the transactional critical path and changes its availability requirement entirely.</td></tr>
+    <tr><td>Individual-level PII reporting</td><td>Analysis operates on aggregates and segments. Named-customer lists are limited to the retention call list, which is access-controlled and justified by a specific business process.</td></tr>
+    <tr><td>Statutory financial reporting</td><td>The platform is a management-information system. It reconciles to the ledger; it is not the ledger.</td></tr>
+    <tr><td>Real-time personalisation to the storefront</td><td>Requires sub-second serving and a different availability class. The event stream would support it; nothing else here would.</td></tr>
+    <tr><td>Predictive stock allocation across locations</td><td>Requires per-location demand history the source does not currently provide.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-usecases">Use cases</h1>
+
+<h2 id="b-ucdiagram">Use case diagram</h2>
+<figure class="full-page">
+  <div class="uml" data-svg="useCases"></div>
+  <figcaption>UML use case diagram
+    <span class="desc">
+      Primary actors on the left initiate; secondary actors on the right are
+      systems the platform depends on. Green use cases support the
+      business-facing ones and are not initiated directly by a business user.
+    </span>
+  </figcaption>
+</figure>
+
+<h2 id="b-ucspecs">Use case specifications</h2>
+<table class="data">
+  <caption>Use case summary</caption>
+  <thead><tr><th class="id">ID</th><th style="width:40mm">Use case</th><th style="width:30mm">Primary actor</th><th>Goal and success condition</th></tr></thead>
+  <tbody>
+    <tr><td class="id">UC-01</td><td>Review trading performance</td><td>Executive</td><td>See revenue, margin, orders and customer counts for the trailing 90 days against the prior 90. Succeeds when every figure carries a comparison.</td></tr>
+    <tr><td class="id">UC-02</td><td>Analyse revenue drivers</td><td>Merchandising</td><td>Decompose a revenue change into volume, price and category mix. Succeeds when the three components sum exactly to the total change.</td></tr>
+    <tr><td class="id">UC-03</td><td>Evaluate campaign return</td><td>Marketing</td><td>See return per campaign and per channel on a stated attribution basis, with alternatives. Succeeds when the basis is visible alongside the figure.</td></tr>
+    <tr><td class="id">UC-04</td><td>Segment the customer base</td><td>Marketing</td><td>Obtain behavioural segments with a recommended action per segment. Succeeds when segments are reproducible from the same dataset.</td></tr>
+    <tr><td class="id">UC-05</td><td>Target customers at risk</td><td>Marketing / CRM</td><td>Obtain a ranked list of currently-active customers likely to lapse. Succeeds when ranked by value at risk and excludes already-churned customers.</td></tr>
+    <tr><td class="id">UC-06</td><td>Plan replenishment</td><td>Merchandising</td><td>Obtain a prioritised purchase list with quantities. Succeeds when quantities reflect measured demand variability and a chosen service level.</td></tr>
+    <tr><td class="id">UC-07</td><td>Monitor live trading</td><td>Operations</td><td>See orders, revenue, payment failures and stock alerts as they happen. Succeeds when the view reflects events within five minutes.</td></tr>
+    <tr><td class="id">UC-08</td><td>Forecast demand</td><td>Merchandising</td><td>Obtain a revenue and unit forecast with an uncertainty range. Succeeds when the model is selected by backtest against a naive baseline.</td></tr>
+    <tr><td class="id">UC-09</td><td>Ingest batch extract</td><td>Order system</td><td>Land the nightly extract without rejecting rows. Supports UC-01 to UC-06, UC-08.</td></tr>
+    <tr><td class="id">UC-10</td><td>Ingest live events</td><td>Gateway / storefront</td><td>Land order, payment, stock and activity events durably. Supports UC-07.</td></tr>
+    <tr><td class="id">UC-11</td><td>Enforce data quality</td><td>Platform</td><td>Verify the warehouse before publication and hold it when unsafe. Included by UC-09 and UC-10.</td></tr>
+    <tr><td class="id">UC-12</td><td>Restate to local currency</td><td>FX service</td><td>Express regional revenue in local currency with the rate and rate date shown. Extends UC-01.</td></tr>
+    <tr><td class="id">UC-13</td><td>Operate the pipeline</td><td>Data analyst</td><td>Run, monitor and correct the pipeline; see what ran, how long and what broke.</td></tr>
+  </tbody>
+</table>
+
+<h3>UC-05 — Target customers at risk (expanded)</h3>
+<table class="kv">
+  <tr><td>Primary actor</td><td>Marketing / CRM manager</td></tr>
+  <tr><td>Trigger</td><td>Weekly retention cycle</td></tr>
+  <tr><td>Preconditions</td><td>The warehouse has been rebuilt and the quality suite passed. At least one full churn observation window of history exists.</td></tr>
+  <tr><td>Main flow</td><td>1. The platform scores every customer whose lifecycle status is not Churned. 2. Each score is multiplied by the customer's projected annual value to give revenue at risk. 3. Customers are banded Low / Medium / High / Critical. 4. The manager works the list from the top. 5. Interventions are recorded outside the platform.</td></tr>
+  <tr><td>Alternative flow</td><td>If the observation window contains only one outcome class, the model cannot be fitted; the platform reports this rather than returning a degenerate score.</td></tr>
+  <tr><td>Postconditions</td><td>A ranked list exists and is exportable. Model quality (holdout AUC) and the drivers of risk are shown alongside it.</td></tr>
+  <tr><td>Business rule</td><td>Already-churned customers are excluded. They are a win-back problem, not a retention one, and including them floods the list with people it is too late to save.</td></tr>
+  <tr><td>Acceptance</td><td>AC-05 (section 15)</td></tr>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-processes">Business processes</h1>
+<figure>
+  <div class="mermaid" data-diagram="monthEnd"></div>
+  <figcaption>Month-end reporting — the target process
+    <span class="desc">Finance and the Executive read the same figures from the same source, so Finance's work becomes a reconciliation check rather than an independent rebuild.</span>
+  </figcaption>
+</figure>
+<figure>
+  <div class="mermaid" data-diagram="churnProcess"></div>
+  <figcaption>Weekly retention intervention cycle
+    <span class="desc">The outcome loop is what allows the next model snapshot to learn from interventions that were actually made.</span>
+  </figcaption>
+</figure>
+
+<!-- ==================================================================== -->
+<h1 id="b-br">Business requirements</h1>
+<p class="legend" style="margin-bottom:4mm">
+  Priority uses MoSCoW. <span class="pill must">Must</span> the release is not
+  acceptable without it · <span class="pill should">Should</span> significant
+  value, a workaround exists · <span class="pill could">Could</span> desirable.
+</p>
+<table class="data">
+  <caption>Business requirements</caption>
+  <thead><tr><th class="id">ID</th><th style="width:56mm">Requirement</th><th style="width:16mm">Priority</th><th style="width:18mm">Status</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td class="id">BR-01</td><td>The business shall have a single agreed definition for every headline metric, recorded and referenced by every consuming surface</td><td><span class="pill must">Must</span></td><td><span class="pill done">Met</span></td><td>Definitions recorded once; implementations proven consistent by reconciliation checks.</td></tr>
+    <tr><td class="id">BR-02</td><td>Reporting shall be produced automatically without manual intervention</td><td><span class="pill must">Must</span></td><td><span class="pill done">Met</span></td><td>Unattended rebuild; run history retained.</td></tr>
+    <tr><td class="id">BR-03</td><td>Data shall not be published when it fails quality verification</td><td><span class="pill must">Must</span></td><td><span class="pill done">Met</span></td><td>Error-severity failure returns a distinct exit code and holds the run.</td></tr>
+    <tr><td class="id">BR-04</td><td>Each role shall have a view answering its own questions without needing the others</td><td><span class="pill must">Must</span></td><td><span class="pill done">Met</span></td><td>Five dashboards, one per audience.</td></tr>
+    <tr><td class="id">BR-05</td><td>Trading and payment health shall be observable in near real time</td><td><span class="pill must">Must</span></td><td><span class="pill done">Met</span></td><td>Five-minute freshness target; measured in event time.</td></tr>
+    <tr><td class="id">BR-06</td><td>Customers shall be segmented by behaviour, with a recommended action per segment</td><td><span class="pill must">Must</span></td><td><span class="pill done">Met</span></td><td>Rule-based and model-based segmentations published together.</td></tr>
+    <tr><td class="id">BR-07</td><td>Marketing return shall be reported on a stated and defensible basis</td><td><span class="pill must">Must</span></td><td><span class="pill partial">Met with limitation</span></td><td>Attribution basis is stated and alternatives published. <strong>Incrementality is a before/after proxy, not an experiment</strong> — see RSK-01.</td></tr>
+    <tr><td class="id">BR-08</td><td>Replenishment shall be driven by measured demand rather than judgement</td><td><span class="pill must">Must</span></td><td><span class="pill done">Met</span></td><td>Safety stock driven by demand variability, not demand level.</td></tr>
+    <tr><td class="id">BR-09</td><td>Customer value shall be attributable to the acquisition channel that produced it</td><td><span class="pill should">Should</span></td><td><span class="pill partial">Met with limitation</span></td><td>Value by acquisition channel is delivered. Value by the loyalty tier <em>held at the time of purchase</em> is not — the source ships no tier history.</td></tr>
+    <tr><td class="id">BR-10</td><td>Any reported figure shall be reproducible at a later date from the same data</td><td><span class="pill must">Must</span></td><td><span class="pill done">Met</span></td><td>Analysis anchored to the data, not the wall clock.</td></tr>
+    <tr><td class="id">BR-11</td><td>Forecasts shall be published with an uncertainty range and a stated model basis</td><td><span class="pill should">Should</span></td><td><span class="pill done">Met</span></td><td>Model chosen by backtest against a naive baseline, which is reported alongside.</td></tr>
+    <tr><td class="id">BR-12</td><td>Regional performance shall be expressible in local currency</td><td><span class="pill could">Could</span></td><td><span class="pill done">Met</span></td><td>Rate and rate date shown with every converted figure.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-fr">Functional requirements</h1>
+<table class="data">
+  <caption>Functional requirements — ingestion and warehouse</caption>
+  <thead><tr><th class="id">ID</th><th style="width:12mm">BR</th><th>Requirement</th><th style="width:16mm">Priority</th></tr></thead>
+  <tbody>
+    <tr><td class="id">FR-01</td><td>BR-02</td><td>The system shall ingest a nightly extract of orders, order lines, customers, products, stores, regions, campaigns, payments, stock snapshots and activity events.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-02</td><td>BR-03</td><td>The system shall land every source row without rejection, and record the count of rows failing each quality expectation.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-03</td><td>BR-01</td><td>The system shall de-duplicate replayed source records on their natural key.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-04</td><td>BR-01</td><td>The system shall repair known source defects — negative quantities, inconsistent categorical casing — and flag each repaired row.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-05</td><td>BR-01</td><td>The system shall retain records with unresolvable references, flagged, rather than discarding them.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-06</td><td>BR-02</td><td>The system shall record, for every pipeline stage, its status, duration, row counts and any error.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-07</td><td>BR-03</td><td>The system shall evaluate quality checks across completeness, validity, uniqueness, consistency, accuracy and timeliness.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-08</td><td>BR-03</td><td>The system shall distinguish a code failure from a data failure by outcome, so each is routed to the right owner.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-09</td><td>BR-01</td><td>The system shall verify that each aggregate agrees with the detail it is derived from, and fail the run when it does not.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-10</td><td>BR-12</td><td>The system shall retrieve daily exchange rates, and shall continue with clearly marked substitute rates when the source is unavailable.</td><td><span class="pill could">Could</span></td></tr>
+    <tr><td class="id">FR-11</td><td>BR-10</td><td>The system shall produce identical output for identical input, including for all model-based analyses.</td><td><span class="pill must">Must</span></td></tr>
+  </tbody>
+</table>
+
+<table class="data">
+  <caption>Functional requirements — analysis</caption>
+  <thead><tr><th class="id">ID</th><th style="width:12mm">BR</th><th>Requirement</th><th style="width:16mm">Priority</th></tr></thead>
+  <tbody>
+    <tr><td class="id">FR-12</td><td>BR-04</td><td>The system shall report revenue, gross profit, margin, order count, average order value and units for any period, comparable to the preceding period.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-13</td><td>BR-04</td><td>The system shall decompose a revenue change into volume, price and category-mix effects that sum to the total change.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-14</td><td>BR-04</td><td>The system shall report performance by region, store, category, subcategory and product.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-15</td><td>BR-04</td><td>The system shall classify products by revenue contribution and by commercial behaviour.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-16</td><td>BR-04</td><td>The system shall identify trading days materially outside their expected pattern, robust to genuine seasonal peaks.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-17</td><td>BR-06</td><td>The system shall score every purchasing customer on recency, frequency and monetary value, using relative rather than absolute thresholds.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-18</td><td>BR-06</td><td>The system shall assign each customer to a named segment with a recommended action.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-19</td><td>BR-06</td><td>The system shall additionally produce a data-driven segmentation and show where it agrees and disagrees with the rule-based one.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-20</td><td>BR-06</td><td>The system shall report retention by acquisition cohort, where a cohort is defined by first purchase rather than by signup.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-21</td><td>BR-09</td><td>The system shall report customer lifetime value as an observed figure and as a projection, stating the assumption behind the projection.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-22</td><td>BR-06</td><td>The system shall produce a churn propensity score for every currently-active customer, using only information available at the time of prediction.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-23</td><td>BR-06</td><td>The system shall rank at-risk customers by value at risk, and report which factors drive risk.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-24</td><td>BR-07</td><td>The system shall report campaign and channel return, cost of acquisition and payback, on an explicitly stated attribution basis.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-25</td><td>BR-07</td><td>The system shall report the same revenue under alternative attribution models and highlight where they disagree.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-26</td><td>BR-07</td><td>The system shall recommend a budget reallocation and state the assumption on which the projected benefit depends.</td><td><span class="pill could">Could</span></td></tr>
+    <tr><td class="id">FR-27</td><td>BR-09</td><td>The system shall report lifetime value against acquisition cost by channel, and shall show no ratio where cost is unmeasured.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-28</td><td>BR-08</td><td>The system shall recommend a reorder point and order quantity per product from measured demand variability and a selectable service level.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-29</td><td>BR-08</td><td>The system shall quantify capital held in overstock and dead stock.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-30</td><td>BR-08</td><td>The system shall classify products by both value contribution and demand predictability, and recommend a stocking policy for each combination.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-31</td><td>BR-11</td><td>The system shall forecast revenue and category demand, select the model by backtest against a held-out period, and publish the naive baseline alongside.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-32</td><td>BR-11</td><td>The system shall publish an uncertainty range with every forecast.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-33</td><td>BR-04</td><td>The system shall report the conversion funnel on a session basis and identify where sessions are lost.</td><td><span class="pill should">Should</span></td></tr>
+  </tbody>
+</table>
+
+<table class="data">
+  <caption>Functional requirements — real time and presentation</caption>
+  <thead><tr><th class="id">ID</th><th style="width:12mm">BR</th><th>Requirement</th><th style="width:16mm">Priority</th></tr></thead>
+  <tbody>
+    <tr><td class="id">FR-34</td><td>BR-05</td><td>The system shall ingest order, payment, stock and customer-activity events continuously and durably, losing none on restart.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-35</td><td>BR-05</td><td>The system shall report live order volume, revenue, payment failure rate, active sessions and stock alerts over a rolling window.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-36</td><td>BR-05</td><td>The system shall present a feed of failed payments and stock alerts, most recent first.</td><td><span class="pill must">Must</span></td></tr>
+    <tr><td class="id">FR-37</td><td>BR-04</td><td>The system shall expose curated and live metrics over an interface consumable by systems other than the dashboards.</td><td><span class="pill should">Should</span></td></tr>
+    <tr><td class="id">FR-38</td><td>BR-04</td><td>The system shall support the organisation's existing business-intelligence tool against the same curated model.</td><td><span class="pill should">Should</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-nfr">Non-functional requirements</h1>
+<table class="data">
+  <caption>Non-functional requirements</caption>
+  <thead><tr><th class="id">ID</th><th style="width:26mm">Category</th><th>Requirement and measure</th><th style="width:18mm">Status</th></tr></thead>
+  <tbody>
+    <tr><td class="id">NFR-01</td><td>Timeliness</td><td>Batch data available before the start of the business day; a full rebuild completes well inside the overnight window.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-02</td><td>Timeliness</td><td>Live events reflected in the real-time view within 5 minutes of occurrence.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-03</td><td>Accuracy</td><td>Aggregates agree with their underlying detail to within 0.01%.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-04</td><td>Reliability</td><td>No event is lost when a consuming process restarts.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-05</td><td>Reproducibility</td><td>Identical inputs produce identical outputs, including model-based analyses.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-06</td><td>Availability</td><td>Dashboards available during business hours. A failed refresh leaves the previous day's figures in place rather than removing them.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-07</td><td>Usability</td><td>A stakeholder can answer their primary question from their own dashboard without training.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-08</td><td>Accessibility</td><td>No chart conveys meaning by colour alone; palettes are safe for common colour-vision deficiencies.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-09</td><td>Transparency</td><td>Every approximate or assumption-dependent figure states its limitation where it is displayed.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-10</td><td>Auditability</td><td>Every row can be traced to its source file and load time; every run is recorded.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-11</td><td>Security</td><td>No credential is stored in source control or in an artefact. Deployment uses short-lived federated credentials.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-12</td><td>Security</td><td>Data stores deny network access by default; all connections encrypted in transit.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-13</td><td>Portability</td><td>The platform runs unchanged on a workstation, on containers and on cloud infrastructure.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-14</td><td>Supportability</td><td>Failures are alerted to an owner.</td><td><span class="pill partial">Partial</span></td></tr>
+    <tr><td class="id">NFR-15</td><td>Maintainability</td><td>A change that breaks a downstream assumption is detected automatically before release.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-16</td><td>Cost</td><td>A non-production environment costs under £50 per month and can be destroyed and rebuilt on demand.</td><td><span class="pill done">Met</span></td></tr>
+    <tr><td class="id">NFR-17</td><td>Privacy</td><td>Personal data is limited to what the retention process requires; analysis is otherwise on aggregates.</td><td><span class="pill done">Met</span></td></tr>
+  </tbody>
+</table>
+<div class="warn">
+  <span class="label">NFR-14 is partially met, and deliberately so</span>
+  Alerting infrastructure is provisioned but no route is configured. Directing
+  an alert to a rota that does not yet exist produces alerts nobody receives,
+  which is worse than no alerting because it looks like coverage. Closing this
+  requires an on-call arrangement to be agreed first.
+</div>
+
+<!-- ==================================================================== -->
+<h1 id="b-data">Data requirements</h1>
+
+<h2 id="b-conceptual">Conceptual model</h2>
+<figure class="full-page">
+  <div class="mermaid" data-diagram="conceptual"></div>
+  <figcaption>Conceptual data model — business entities and their relationships
+    <span class="desc">
+      Business-level entities only. Note that a stock position is a
+      point-in-time observation: it is never summed across weeks, which is a
+      business rule before it is a technical one.
+    </span>
+  </figcaption>
+</figure>
+
+<h2 id="b-metrics">Agreed metric definitions</h2>
+<p>
+  These definitions are the commercial contract. Each is implemented once and
+  consumed everywhere from that implementation.
+</p>
+<table class="data">
+  <caption>Agreed definitions of the headline metrics</caption>
+  <thead><tr><th style="width:36mm">Metric</th><th>Agreed definition</th><th style="width:44mm">Decision embedded in it</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Revenue</strong></td><td>Net value of completed orders: gross less discounts, excluding shipping and tax.</td><td>Shipping and tax are pass-throughs, not earnings. Cancelled and returned orders are retained and flagged, not deleted.</td></tr>
+    <tr><td><strong>Gross profit</strong></td><td>Revenue less product cost.</td><td>Product cost only. No fulfilment or overhead allocation, because the source does not carry it and inventing one would present a fabricated figure as measured.</td></tr>
+    <tr><td><strong>Average order value</strong></td><td>Revenue divided by completed orders, computed at order level.</td><td>Computed at order level, never averaged from order lines — the latter answers a different question and gives a materially smaller number.</td></tr>
+    <tr><td><strong>Churn</strong></td><td>No completed order within the churn window (default 90 days) of the analysis date.</td><td>The window is a business choice and is configurable. A quarterly-cadence business would need a longer one.</td></tr>
+    <tr><td><strong>Repeat rate</strong></td><td>Customers with two or more orders, as a share of customers with at least one.</td><td>Denominator is purchasers, not all customers — otherwise activation and retention are conflated.</td></tr>
+    <tr><td><strong>Cohort</strong></td><td>The calendar month of a customer's first completed order.</td><td>First purchase, not signup. A signup that never bought is an activation problem wearing a retention costume.</td></tr>
+    <tr><td><strong>Return on ad spend</strong></td><td>Attributed revenue divided by spend, on the stated attribution basis.</td><td>Profit-based return above 1.0 is the meaningful break-even; revenue-based return above 1.0 can still be a loss.</td></tr>
+    <tr><td><strong>Cost of acquisition</strong></td><td>Spend divided by attributed <em>new</em> customers.</td><td>New customers only. Counting all attributed customers treats existing customers as acquisitions and understates cost.</td></tr>
+    <tr><td><strong>Payment success</strong></td><td>Two measures: failure rate across all attempts (gateway health) and success rate per order on the final attempt (customer experience).</td><td>A decline recovered on retry is invisible to the customer and very visible to the gateway. One ambiguous rate would be argued about in every review.</td></tr>
+    <tr><td><strong>Days of cover</strong></td><td>Stock on hand divided by daily sell-through.</td><td>Undefined, not infinite, where a product sells nothing.</td></tr>
+    <tr><td><strong>Conversion rate</strong></td><td>Sessions reaching purchase as a share of sessions, on a session basis.</td><td>Session-based, so a visitor viewing ten products is one session, not ten — which is why the funnel cannot exceed 100%.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-reporting">Reporting requirements</h1>
+<table class="data">
+  <caption>Required views by audience</caption>
+  <thead><tr><th style="width:26mm">View</th><th style="width:32mm">Audience</th><th>Must answer</th><th style="width:22mm">Refresh</th></tr></thead>
+  <tbody>
+    <tr><td>Executive</td><td>Commercial Director, executive team</td><td>Is the business healthy, what changed, and what needs attention this week</td><td>Daily</td></tr>
+    <tr><td>Sales</td><td>Sales and merchandising</td><td>What sold, why the number moved, which products and regions to act on</td><td>Daily</td></tr>
+    <tr><td>Customers</td><td>CRM, marketing</td><td>Who is valuable, who is leaving, which cohorts are improving</td><td>Daily</td></tr>
+    <tr><td>Marketing</td><td>Marketing manager</td><td>What the spend bought, on what basis, and where to move budget</td><td>Daily</td></tr>
+    <tr><td>Operations</td><td>Operations, data platform</td><td>Payment health, stock actions, funnel losses, pipeline and data quality</td><td>Daily</td></tr>
+    <tr><td>Real time</td><td>Operations</td><td>What is happening right now and what needs intervention</td><td>Continuous</td></tr>
+    <tr><td>Insight report</td><td>All, month-end</td><td>A written narrative with the supporting extracts</td><td>On demand</td></tr>
+  </tbody>
+</table>
+<div class="note">
+  <span class="label">Why the real-time view is not in the BI tool</span>
+  A scheduled import refresh cannot deliver sub-minute latency. Presenting a
+  fifteen-minute-old figure as "live" would be worse than not offering it, so
+  the live view is served by the platform directly and the BI tool covers the
+  curated daily model.
+</div>
+
+<!-- ==================================================================== -->
+<h1 id="b-assumptions">Assumptions, constraints and dependencies</h1>
+<table class="data">
+  <caption>Assumptions</caption>
+  <thead><tr><th class="id">ID</th><th>Assumption</th><th style="width:56mm">If it proves false</th></tr></thead>
+  <tbody>
+    <tr><td class="id">AS-01</td><td>Source systems are accurate at the point of capture; defects are in transfer and integration, not in the transaction itself.</td><td>Quality thresholds would need to be reset and the repair logic reconsidered.</td></tr>
+    <tr><td class="id">AS-02</td><td>A nightly batch cadence is sufficient for commercial decision-making, with real time reserved for operational response.</td><td>The batch layer would need incremental or streaming ingestion; the stage boundaries already accommodate this.</td></tr>
+    <tr><td class="id">AS-03</td><td>The order management system's campaign stamp is the organisation's accepted attribution basis.</td><td>Attribution would need a dedicated tracking capability upstream.</td></tr>
+    <tr><td class="id">AS-04</td><td>Product cost is a sufficient basis for margin at management-reporting level.</td><td>A cost allocation model would be required, with Finance owning the allocation rules.</td></tr>
+    <tr><td class="id">AS-05</td><td>Stakeholders will adopt the agreed definitions rather than maintaining parallel spreadsheets.</td><td>The platform would deliver technical capability without the business outcome. This is the largest non-technical risk.</td></tr>
+  </tbody>
+</table>
+<table class="data">
+  <caption>Constraints and dependencies</caption>
+  <thead><tr><th class="id">ID</th><th style="width:24mm">Type</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td class="id">CN-01</td><td>Team</td><td>Two people build and operate the platform. Operational surface must stay within that capacity.</td></tr>
+    <tr><td class="id">CN-02</td><td>Data</td><td>Attribution is limited to what the source records: one campaign per order, last touch.</td></tr>
+    <tr><td class="id">CN-03</td><td>Data</td><td>No history of loyalty-tier changes is available at source, which blocks the tier-at-time-of-purchase view.</td></tr>
+    <tr><td class="id">CN-04</td><td>Cost</td><td>Non-production infrastructure must be destroyable and rebuildable rather than left running.</td></tr>
+    <tr><td class="id">DP-01</td><td>Dependency</td><td>Nightly extract delivered by the order management system.</td></tr>
+    <tr><td class="id">DP-02</td><td>Dependency</td><td>Event feeds from the payment gateway, storefront and warehouse systems.</td></tr>
+    <tr><td class="id">DP-03</td><td>Dependency</td><td>An on-call arrangement, required before NFR-14 can be closed.</td></tr>
+    <tr><td class="id">DP-04</td><td>Dependency</td><td>Marketing agreement to withhold spend in a holdout, required for genuine incrementality.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-risks">Risks</h1>
+<table class="data">
+  <caption>Business risks</caption>
+  <thead><tr><th class="id">ID</th><th style="width:44mm">Risk</th><th style="width:16mm">Impact</th><th style="width:18mm">Likelihood</th><th>Mitigation</th></tr></thead>
+  <tbody>
+    <tr><td class="id">RSK-01</td><td>Budget decisions are taken on an incrementality figure that is a proxy</td><td><span class="pill must">High</span></td><td>Certain</td><td>Labelled as approximate wherever displayed; five attribution models published so the spread is visible. Resolved only by a holdout experiment (DP-04).</td></tr>
+    <tr><td class="id">RSK-02</td><td>Stakeholders continue to maintain parallel spreadsheets</td><td><span class="pill must">High</span></td><td>Medium</td><td>Definitions agreed with Finance before build; every figure carries its definition. Ultimately an adoption matter, not a technical one.</td></tr>
+    <tr><td class="id">RSK-03</td><td>A pipeline failure goes unnoticed because nothing is routed to a person</td><td><span class="pill should">Medium</span></td><td>Medium</td><td>Run status and quality results visible on the Operations dashboard and via the API. Closing requires DP-03.</td></tr>
+    <tr><td class="id">RSK-04</td><td>Source data drifts in a way that is structurally valid but semantically wrong</td><td><span class="pill should">Medium</span></td><td>Medium</td><td>Current checks detect broken data, not drifted data. Quality history is retained as the basis for profiling.</td></tr>
+    <tr><td class="id">RSK-05</td><td>Churn model degrades as customer behaviour changes</td><td><span class="pill should">Medium</span></td><td>Medium</td><td>Model quality reported with every run; a falling holdout score is visible rather than silent.</td></tr>
+    <tr><td class="id">RSK-06</td><td>Key-person dependency in a two-person team</td><td><span class="pill should">Medium</span></td><td>Medium</td><td>Everything is code, documented and reproducible from one command; no manual step exists in the build.</td></tr>
+    <tr><td class="id">RSK-07</td><td>Retention call list contains personal data</td><td><span class="pill should">Medium</span></td><td>Low</td><td>Access-controlled, justified by a defined business process, and the only named-customer output in the platform.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-acceptance">Acceptance criteria</h1>
+<p>
+  Each criterion is verified by an executable check, not by inspection.
+</p>
+<table class="data">
+  <caption>Acceptance criteria and their verification</caption>
+  <thead><tr><th class="id">ID</th><th style="width:12mm">BR</th><th>Criterion</th><th style="width:20mm">Result</th></tr></thead>
+  <tbody>
+    <tr><td class="id">AC-01</td><td>BR-01</td><td>Revenue computed from order lines equals revenue computed from order headers, and both equal the totals in every aggregate that reports revenue.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-02</td><td>BR-02</td><td>A full rebuild completes unattended from raw data to published marts, and records every stage.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-03</td><td>BR-03</td><td>Introducing a genuine defect causes the quality suite to fail; removing it causes the suite to pass.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-04</td><td>BR-03</td><td>A data failure and a code failure produce different outcomes, so they can be routed differently.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-05</td><td>BR-06</td><td>Every scored customer receives a probability between 0 and 1; already-churned customers are excluded; the list is ordered by value at risk.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-06</td><td>BR-06</td><td>The churn model's inputs are demonstrably drawn from before the outcome window, so no future information is used.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-07</td><td>BR-07</td><td>All attribution models credit the same total revenue, differing only in how it is distributed.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-08</td><td>BR-04</td><td>Volume, price and mix effects sum exactly to the reported revenue change.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-09</td><td>BR-04</td><td>The conversion funnel decreases monotonically at every step.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-10</td><td>BR-05</td><td>Events are not lost when the consuming process is interrupted mid-batch.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-11</td><td>BR-05</td><td>Replaying a recorded stream reproduces the same live figures it originally produced.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-12</td><td>BR-08</td><td>Recommended buffer stock increases with demand variability, and a higher service level never reduces it.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-13</td><td>BR-10</td><td>Two runs from the same inputs produce byte-identical outputs.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-14</td><td>BR-11</td><td>The selected forecast model is chosen by backtest, and the naive baseline is reported alongside it.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-15</td><td>BR-12</td><td>Every converted figure displays the rate and rate date used, and substitute rates are identifiable.</td><td><span class="pill done">Pass</span></td></tr>
+    <tr><td class="id">AC-16</td><td>BR-04</td><td>No chart uses two value axes, and no chart conveys meaning by colour alone.</td><td><span class="pill done">Pass</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-trace">Traceability matrix</h1>
+<p>
+  Every business requirement traces forward to the functional requirements that
+  realise it, the component that implements it, and the check that proves it.
+</p>
+<table class="data">
+  <caption>Requirements traceability</caption>
+  <thead><tr><th class="id">BR</th><th style="width:28mm">Use case</th><th style="width:34mm">Functional requirements</th><th style="width:42mm">Implemented in</th><th class="id">Verified by</th></tr></thead>
+  <tbody>
+    <tr><td class="id">BR-01</td><td>UC-09, UC-11</td><td>FR-03, FR-04, FR-05, FR-09</td><td><code>database/staging/</code>, <code>etl/quality/suite.py</code></td><td class="id">AC-01</td></tr>
+    <tr><td class="id">BR-02</td><td>UC-09, UC-13</td><td>FR-01, FR-06</td><td><code>etl/pipeline.py</code>, <code>etl/run_context.py</code></td><td class="id">AC-02</td></tr>
+    <tr><td class="id">BR-03</td><td>UC-11</td><td>FR-02, FR-07, FR-08, FR-09</td><td><code>etl/quality/</code></td><td class="id">AC-03, AC-04</td></tr>
+    <tr><td class="id">BR-04</td><td>UC-01, UC-02</td><td>FR-12 – FR-16, FR-33, FR-37, FR-38</td><td><code>database/analytics/</code>, <code>dashboards/</code></td><td class="id">AC-08, AC-09, AC-16</td></tr>
+    <tr><td class="id">BR-05</td><td>UC-07, UC-10</td><td>FR-34, FR-35, FR-36</td><td><code>streaming/</code></td><td class="id">AC-10, AC-11</td></tr>
+    <tr><td class="id">BR-06</td><td>UC-04, UC-05</td><td>FR-17 – FR-20, FR-22, FR-23</td><td><code>analytics/customer/</code>, <code>035_mart_rfm_segments.sql</code></td><td class="id">AC-05, AC-06</td></tr>
+    <tr><td class="id">BR-07</td><td>UC-03</td><td>FR-24, FR-25, FR-26</td><td><code>analytics/marketing/attribution.py</code></td><td class="id">AC-07</td></tr>
+    <tr><td class="id">BR-08</td><td>UC-06</td><td>FR-28, FR-29, FR-30</td><td><code>analytics/inventory/optimisation.py</code></td><td class="id">AC-12</td></tr>
+    <tr><td class="id">BR-09</td><td>UC-04</td><td>FR-21, FR-27</td><td><code>analytics/customer/clv.py</code></td><td class="id">AC-05</td></tr>
+    <tr><td class="id">BR-10</td><td>UC-13</td><td>FR-11</td><td><code>030_analysis_window.sql</code>, seeded models</td><td class="id">AC-13</td></tr>
+    <tr><td class="id">BR-11</td><td>UC-08</td><td>FR-31, FR-32</td><td><code>analytics/forecasting/forecast.py</code></td><td class="id">AC-14</td></tr>
+    <tr><td class="id">BR-12</td><td>UC-12</td><td>FR-10</td><td><code>etl/extract/api_source.py</code>, <code>043_mart_revenue_local.sql</code></td><td class="id">AC-15</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="b-glossary">Glossary and sign-off</h1>
+<table class="data">
+  <caption>Business glossary</caption>
+  <thead><tr><th style="width:38mm">Term</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>Analysis date</td><td>The latest date present in the data, used as "today" by every recency-based measure so results are reproducible.</td></tr>
+    <tr><td>Attribution</td><td>The rule assigning credit for an order to a marketing activity. This platform ships last touch and publishes alternatives.</td></tr>
+    <tr><td>Churn window</td><td>The period without a purchase after which a customer is considered lost. Default 90 days; configurable.</td></tr>
+    <tr><td>Cohort</td><td>Customers grouped by the month of their first purchase.</td></tr>
+    <tr><td>Incrementality</td><td>Revenue that would not have occurred without the activity. Estimated here by a baseline comparison, not measured by experiment.</td></tr>
+    <tr><td>Lifetime value</td><td>Total profit expected from a customer relationship. Reported as observed and projected, separately.</td></tr>
+    <tr><td>RFM</td><td>Segmentation by recency, frequency and monetary value, scored in quintiles.</td></tr>
+    <tr><td>Safety stock</td><td>Buffer inventory covering demand variability during resupply. Driven by variability, not volume.</td></tr>
+    <tr><td>Service level</td><td>The probability of not running out during resupply. A commercial choice; higher costs more stock.</td></tr>
+    <tr><td>Session</td><td>One continuous visit. The counting unit for the conversion funnel.</td></tr>
+  </tbody>
+</table>
+
+<h2 class="plain" style="margin-top:10mm">Sign-off</h2>
+<table class="data">
+  <caption>Approval</caption>
+  <thead><tr><th style="width:44mm">Role</th><th style="width:44mm">Name</th><th style="width:30mm">Date</th><th>Signature</th></tr></thead>
+  <tbody>
+    <tr><td>Business owner<br><span class="legend">Commercial Director</span></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+    <tr><td>Delivery lead<br><span class="legend">Data Platform</span></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+    <tr><td>Finance<br><span class="legend">Definitions accepted</span></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+    <tr><td>IT Security<br><span class="legend">NFR-11, NFR-12</span></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+    <tr><td>Data Protection Officer<br><span class="legend">NFR-17, RSK-07</span></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+  </tbody>
+</table>
+<div class="note">
+  <span class="label">Conditions attaching to acceptance</span>
+  Release 1 is recommended for acceptance with three items carried forward:
+  <strong>RSK-01</strong> (incrementality remains a proxy until a holdout is
+  agreed), <strong>NFR-14</strong> (alerting cannot be closed until an on-call
+  arrangement exists), and <strong>BR-09</strong> (tier-at-purchase requires
+  source-side change capture). None blocks the business outcomes in section 3.
+</div>
+
+</main>
+
+<script src="node_modules/mermaid/dist/mermaid.min.js"></script>
+<script src="diagrams-brd.js"></script>
+<script src="uml-svg.js"></script>
+<script src="boot.js"></script>
+</body>
+</html>
