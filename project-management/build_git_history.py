@@ -526,6 +526,38 @@ def git(*args, check=True, binary=False, env=None):
     return result.stdout if binary else result.stdout.decode("utf-8", "replace").strip()
 
 
+UNTRACKED_BLOCKER = re.compile(
+    r"untracked working tree files would be overwritten by \w+:\n(.*?)\n(?:Please|Aborting)",
+    re.DOTALL)
+
+
+def git_retrying(*args, env=None):
+    """Run a git command, clearing the untracked files it trips over.
+
+    Switching branches can leave a large binary behind on Windows - the working
+    tree copy survives the checkout and the next merge then refuses to
+    overwrite it. The paths named in that error are tracked in the commit we
+    are moving to, so deleting the stale copies is safe and the retry succeeds.
+    """
+    result = subprocess.run(["git"] + list(args), cwd=REPO, capture_output=True,
+                            env={**os.environ, **(env or {})})
+    if result.returncode == 0:
+        return
+    message = result.stderr.decode("utf-8", "replace")
+    blocked = UNTRACKED_BLOCKER.search(message)
+    if not blocked:
+        raise RuntimeError(f"git {' '.join(args)} failed:\n{message}")
+
+    for line in blocked.group(1).splitlines():
+        path = line.strip()
+        if not path:
+            continue
+        full = os.path.join(REPO, path)
+        if os.path.isfile(full):
+            os.remove(full)
+    git(*args, env=env)
+
+
 def tracked_files():
     return [p for p in git("ls-tree", "-r", "--name-only", BASE_BRANCH).splitlines() if p]
 
@@ -746,7 +778,7 @@ def build(dry_run=False, force=False):
             author = issue["assignee"]
             times = schedule(ticket, len(commits))
 
-            git("checkout", "-q", DEV_BRANCH)
+            git_retrying("checkout", "-q", DEV_BRANCH)
             git("checkout", "-q", "-b", branch)
 
             for (subject, paths), when in zip(commits, times):
@@ -774,17 +806,17 @@ def build(dry_run=False, force=False):
             merged_back = False
 
             if index:                       # development has moved since the cut
-                git("checkout", "-q", branch)
+                git_retrying("checkout", "-q", branch)
                 when = last + dt.timedelta(minutes=20)
-                git("merge", "--no-ff", "-q", DEV_BRANCH, "-m",
+                git_retrying("merge", "--no-ff", "-q", DEV_BRANCH, "-m",
                     f"Merge {DEV_BRANCH} into {branch}\n\n"
                     f"Bring {ticket} up to date with {sprint} before review.",
                     env=identity(author, when))
                 merged_back = True
 
-            git("checkout", "-q", DEV_BRANCH)
+            git_retrying("checkout", "-q", DEV_BRANCH)
             when = last + dt.timedelta(minutes=40)
-            git("merge", "--no-ff", "-q", branch, "-m",
+            git_retrying("merge", "--no-ff", "-q", branch, "-m",
                 f"Merge branch '{branch}' into {DEV_BRANCH}\n\n"
                 f"{ticket}: {issue['summary']}", env=identity(author, when))
             branches.append((branch, merged_back))
