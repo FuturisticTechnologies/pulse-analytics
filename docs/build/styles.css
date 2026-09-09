@@ -1,0 +1,574 @@
+/* ===========================================================================
+   Print stylesheet for the PulseAnalytics documents.
+
+   Uses the same palette as dashboards/streamlit/theme.py, so a diagram in the
+   architecture document and a chart on the executive dashboard are recognisably
+   the same system. The colour roles carry the same meanings too: blue is the
+   primary series, the status colours stay reserved for status.
+   =========================================================================== */
+
+:root {
+  /* Categorical - fixed order, never cycled (see theme.py) */
+  --series-1: #2a78d6; /* blue */
+  --series-2: #eb6834; /* orange */
+  --series-3: #1baf7a; /* aqua */
+  --series-4: #eda100; /* yellow */
+  --series-5: #e87ba4; /* magenta */
+  --series-6: #008300; /* green */
+  --series-7: #4a3aa7; /* violet */
+  --series-8: #e34948; /* red */
+
+  /* Sequential ramp, used for layer depth in diagrams */
+  --blue-100: #cde2fb;
+  --blue-200: #9ec5f4;
+  --blue-400: #3987e5;
+  --blue-600: #184f95;
+
+  /* Status - reserved, always paired with a word */
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+
+  /* Chrome and ink */
+  --surface: #fcfcfb;
+  --page: #ffffff;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --rule: #e1e0d9;
+  --axis: #c3c2b7;
+
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Cascadia Mono", "Consolas", "SF Mono", ui-monospace, monospace;
+}
+
+@page {
+  size: A4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 10.2pt;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--page);
+  margin: 0;
+  counter-reset: figure table;
+}
+
+/* --------------------------------------------------------------------------
+   Cover
+   -------------------------------------------------------------------------- */
+.cover {
+  page-break-after: always;
+  padding-top: 42mm;
+}
+
+.cover .eyebrow {
+  font-size: 10pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--series-1);
+  font-weight: 600;
+}
+
+.cover h1 {
+  font-size: 30pt;
+  line-height: 1.15;
+  margin: 8mm 0 4mm 0;
+  padding: 0;
+  border: none;
+  color: var(--ink);
+  page-break-before: auto;
+  counter-increment: none;
+}
+
+.cover h1::before {
+  content: none;
+}
+
+.cover .subtitle {
+  font-size: 13pt;
+  color: var(--ink-2);
+  margin-bottom: 24mm;
+  font-weight: 400;
+}
+
+.cover .rule {
+  height: 3px;
+  width: 56mm;
+  background: var(--series-1);
+  margin-bottom: 10mm;
+}
+
+.doc-control {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+  margin-top: 6mm;
+}
+
+.doc-control td {
+  padding: 2.6mm 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.doc-control td:first-child {
+  width: 42mm;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 8.4pt;
+  letter-spacing: 0.05em;
+  padding-top: 3.2mm;
+}
+
+/* --------------------------------------------------------------------------
+   Headings - numbered automatically so the contents cannot drift from the body
+   -------------------------------------------------------------------------- */
+h1 {
+  font-size: 17pt;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 6mm 0;
+  padding-bottom: 3mm;
+  border-bottom: 2px solid var(--series-1);
+  page-break-before: always;
+  page-break-after: avoid;
+  counter-increment: h1;
+  counter-reset: h2 figure table;
+}
+
+h1::before {
+  content: counter(h1) ".  ";
+  color: var(--series-1);
+}
+
+body {
+  counter-reset: h1 figure table;
+}
+
+h2 {
+  font-size: 12.6pt;
+  font-weight: 600;
+  margin: 8mm 0 3mm 0;
+  color: var(--ink);
+  page-break-after: avoid;
+  counter-increment: h2;
+  counter-reset: h3;
+}
+
+h2::before {
+  content: counter(h1) "." counter(h2) "  ";
+  color: var(--series-1);
+}
+
+h3 {
+  font-size: 10.8pt;
+  font-weight: 600;
+  margin: 5.5mm 0 2mm 0;
+  color: var(--ink);
+  page-break-after: avoid;
+  counter-increment: h3;
+}
+
+h3::before {
+  content: counter(h1) "." counter(h2) "." counter(h3) "  ";
+  color: var(--muted);
+  font-weight: 500;
+}
+
+h4 {
+  font-size: 10.2pt;
+  font-weight: 600;
+  margin: 4mm 0 1.5mm 0;
+  color: var(--ink-2);
+  page-break-after: avoid;
+}
+
+/* Unnumbered headings (cover, contents, appendices) */
+.plain h1,
+h1.plain {
+  counter-increment: none;
+}
+
+h1.plain::before,
+h2.plain::before,
+h3.plain::before {
+  content: none;
+}
+
+p {
+  margin: 0 0 3mm 0;
+  orphans: 3;
+  widows: 3;
+}
+
+strong {
+  font-weight: 600;
+}
+
+a {
+  color: var(--series-1);
+  text-decoration: none;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 8.8pt;
+  background: #f4f4f1;
+  padding: 0.4mm 1.2mm;
+  border-radius: 2px;
+  color: var(--blue-600);
+}
+
+pre {
+  font-family: var(--mono);
+  font-size: 8.4pt;
+  line-height: 1.45;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--series-1);
+  border-radius: 3px;
+  padding: 3mm 4mm;
+  overflow: hidden;
+  white-space: pre-wrap;
+  page-break-inside: avoid;
+  margin: 3mm 0 4mm 0;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  color: var(--ink);
+}
+
+ul,
+ol {
+  margin: 0 0 3mm 0;
+  padding-left: 6mm;
+}
+
+li {
+  margin-bottom: 1.2mm;
+}
+
+/* --------------------------------------------------------------------------
+   Tables
+   -------------------------------------------------------------------------- */
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8.9pt;
+  margin: 2mm 0 5mm 0;
+  page-break-inside: auto;
+}
+
+table.data caption {
+  caption-side: top;
+  text-align: left;
+  font-size: 8.6pt;
+  color: var(--muted);
+  font-weight: 600;
+  padding-bottom: 1.5mm;
+  counter-increment: table;
+}
+
+table.data caption::before {
+  content: "Table " counter(h1) "." counter(table) " — ";
+}
+
+table.data thead th {
+  background: var(--surface);
+  border-bottom: 1.5px solid var(--axis);
+  border-top: 1px solid var(--rule);
+  text-align: left;
+  padding: 2mm 2.5mm;
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 8.6pt;
+}
+
+table.data tbody td {
+  border-bottom: 1px solid var(--rule);
+  padding: 1.8mm 2.5mm;
+  vertical-align: top;
+}
+
+table.data tbody tr {
+  page-break-inside: avoid;
+}
+
+table.data td.id,
+table.data th.id {
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 8.2pt;
+  color: var(--blue-600);
+  width: 20mm;
+}
+
+table.data td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+table.data td.centre {
+  text-align: center;
+}
+
+/* Priority and status pills. The word carries the meaning; colour reinforces
+   it - so the table still reads in greyscale and for a colour-blind reader. */
+.pill {
+  display: inline-block;
+  font-size: 7.6pt;
+  font-weight: 600;
+  padding: 0.6mm 2mm;
+  border-radius: 8px;
+  white-space: nowrap;
+  border: 1px solid;
+}
+
+.pill.must {
+  color: #8f2020;
+  border-color: #e6b0b0;
+  background: #fbeaea;
+}
+.pill.should {
+  color: #8a5200;
+  border-color: #f0d3a0;
+  background: #fdf3e2;
+}
+.pill.could {
+  color: #1c5cab;
+  border-color: var(--blue-200);
+  background: #eaf3fe;
+}
+.pill.done {
+  color: #0a6b0a;
+  border-color: #b3ddb3;
+  background: #e9f6e9;
+}
+.pill.partial {
+  color: #8a5200;
+  border-color: #f0d3a0;
+  background: #fdf3e2;
+}
+.pill.out {
+  color: var(--ink-2);
+  border-color: var(--axis);
+  background: #f2f1ee;
+}
+
+/* --------------------------------------------------------------------------
+   Callouts
+   -------------------------------------------------------------------------- */
+.note,
+.decision,
+.warn {
+  border-left: 3px solid var(--series-1);
+  background: var(--surface);
+  padding: 3mm 4mm;
+  margin: 3mm 0 4mm 0;
+  font-size: 9.4pt;
+  page-break-inside: avoid;
+}
+
+.note .label,
+.decision .label,
+.warn .label {
+  display: block;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--series-1);
+  margin-bottom: 1.2mm;
+}
+
+.warn {
+  border-left-color: var(--serious);
+}
+.warn .label {
+  color: #a8542c;
+}
+
+.decision {
+  border-left-color: var(--series-3);
+}
+.decision .label {
+  color: #0f7d57;
+}
+
+/* --------------------------------------------------------------------------
+   Figures and diagrams
+   -------------------------------------------------------------------------- */
+figure {
+  margin: 4mm 0 6mm 0;
+  page-break-inside: avoid;
+  text-align: center;
+}
+
+figure .mermaid,
+figure .uml {
+  background: var(--page);
+  padding: 2mm 0;
+}
+
+figure svg {
+  max-width: 100%;
+  height: auto;
+}
+
+figcaption {
+  counter-increment: figure;
+  font-size: 8.6pt;
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  margin-top: 2.5mm;
+  padding-top: 1.5mm;
+  border-top: 1px solid var(--rule);
+}
+
+figcaption::before {
+  content: "Figure " counter(h1) "." counter(figure) " — ";
+}
+
+figcaption .desc {
+  display: block;
+  font-weight: 400;
+  color: var(--ink-2);
+  margin-top: 0.8mm;
+}
+
+/* A diagram that is wide rather than tall gets its own page. */
+figure.full-page {
+  page-break-before: always;
+  page-break-after: always;
+}
+
+/* --------------------------------------------------------------------------
+   Table of contents
+   -------------------------------------------------------------------------- */
+.toc {
+  page-break-after: always;
+}
+
+.toc h1 {
+  page-break-before: avoid;
+}
+
+.toc ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: toc1;
+}
+
+.toc li {
+  margin: 0;
+}
+
+.toc .toc-1 {
+  counter-increment: toc1;
+  display: flex;
+  align-items: baseline;
+  font-weight: 600;
+  font-size: 10pt;
+  margin-top: 3.2mm;
+  color: var(--ink);
+}
+
+.toc .toc-1 .n {
+  width: 9mm;
+  color: var(--series-1);
+  flex: none;
+}
+
+.toc .toc-2 {
+  display: flex;
+  align-items: baseline;
+  font-size: 9.4pt;
+  color: var(--ink-2);
+  margin-top: 1mm;
+  padding-left: 9mm;
+  font-weight: 400;
+}
+
+.toc .toc-2 .n {
+  width: 11mm;
+  color: var(--muted);
+  flex: none;
+}
+
+.toc .fill {
+  flex: 1;
+  border-bottom: 1px dotted var(--axis);
+  margin: 0 2mm 0 2mm;
+  transform: translateY(-1mm);
+}
+
+.toc .pg {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 9pt;
+  flex: none;
+}
+
+/* --------------------------------------------------------------------------
+   Utilities
+   -------------------------------------------------------------------------- */
+.lead {
+  font-size: 11pt;
+  color: var(--ink-2);
+  line-height: 1.5;
+  margin-bottom: 5mm;
+}
+
+.two-col {
+  column-count: 2;
+  column-gap: 8mm;
+}
+
+.avoid-break {
+  page-break-inside: avoid;
+}
+
+.new-page {
+  page-break-before: always;
+}
+
+.legend {
+  font-size: 8.4pt;
+  color: var(--muted);
+  margin-top: 1.5mm;
+}
+
+.kv {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.2pt;
+  margin: 2mm 0 4mm 0;
+}
+.kv td {
+  padding: 1.6mm 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.kv td:first-child {
+  width: 46mm;
+  color: var(--muted);
+  font-weight: 600;
+}
