@@ -703,13 +703,19 @@ def build(dry_run=False, force=False):
     # development move underneath a branch that is still open, so the branch
     # takes a merge of development before it is merged itself - the merge
     # history a real team leaves behind, in both directions.
-    groups = []
+    groups, claimed, current_sprint = [], set(), None
     for ticket, commits in PLAN:
         sprint = ISSUE[ticket].get("sprint") or "Backlog"
-        if groups and groups[-1][0] == sprint:
+        paths = {p for _, ps in commits for p in ps}
+        # A bug branch must be cut *after* the story that introduced the file
+        # it fixes, or both sides add the same path and the merge conflicts.
+        # Overlapping paths therefore start a new batch.
+        if groups and sprint == current_sprint and not (paths & claimed):
             groups[-1][1].append((ticket, commits))
+            claimed |= paths
         else:
             groups.append((sprint, [(ticket, commits)]))
+            current_sprint, claimed = sprint, set(paths)
 
     for sprint, group in groups:
         cut = []
