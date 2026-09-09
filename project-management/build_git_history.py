@@ -573,6 +573,15 @@ def stamp(when):
     return when.strftime("%Y-%m-%d %H:%M:%S +0100")
 
 
+def identity(author_key, when):
+    name, email = AUTHORS[author_key]
+    return {
+        "GIT_AUTHOR_NAME": name, "GIT_AUTHOR_EMAIL": email,
+        "GIT_COMMITTER_NAME": name, "GIT_COMMITTER_EMAIL": email,
+        "GIT_AUTHOR_DATE": stamp(when), "GIT_COMMITTER_DATE": stamp(when),
+    }
+
+
 def commit(subject, body, author_key, when):
     name, email = AUTHORS[author_key]
     env = {
@@ -687,65 +696,74 @@ def build(dry_run=False, force=False):
            "pulse/PULSE-nn-<slug> and are merged here with --no-ff.",
            "devendranath.singam", root_when)
 
-    dev_position = 0
     branches = []
 
+    # Work a sprint at a time: cut every branch for the sprint off the same
+    # development commit, then merge them back one by one. That is what makes
+    # development move underneath a branch that is still open, so the branch
+    # takes a merge of development before it is merged itself - the merge
+    # history a real team leaves behind, in both directions.
+    groups = []
     for ticket, commits in PLAN:
-        issue = ISSUE[ticket]
-        branch = f"{BRANCH_PREFIX}{ticket}-{slug(issue['summary'])}"
-        author = issue["assignee"]
-        times = schedule(ticket, len(commits))
+        sprint = ISSUE[ticket].get("sprint") or "Backlog"
+        if groups and groups[-1][0] == sprint:
+            groups[-1][1].append((ticket, commits))
+        else:
+            groups.append((sprint, [(ticket, commits)]))
 
-        git("checkout", "-q", DEV_BRANCH)
-        git("checkout", "-q", "-b", branch)
-        created_at = dev_position
+    for sprint, group in groups:
+        cut = []
 
-        for (subject, paths), when in zip(commits, times):
-            for path in paths:
-                data = content[path]
-                if ticket in BEFORE_FIX and path == BEFORE_FIX[ticket][0]:
-                    pass                    # the fix restores the final content
-                elif any(path == spec[0] and k != ticket
-                         for k, spec in BEFORE_FIX.items()):
-                    owner = next(k for k, spec in BEFORE_FIX.items()
-                                 if spec[0] == path)
-                    data = apply_before(owner, path, data)
-                write(path, data)
-            commit(f"{ticket}: {subject}", "", author, when)
+        for ticket, commits in group:
+            issue = ISSUE[ticket]
+            branch = f"{BRANCH_PREFIX}{ticket}-{slug(issue['summary'])}"
+            author = issue["assignee"]
+            times = schedule(ticket, len(commits))
 
-        # sweep any unassigned files into the last planned ticket
-        if ticket == SWEEP[0] and unassigned:
-            for path in unassigned:
-                write(path, content[path])
-            commit(f"{ticket}: {SWEEP[1]}", "", author, times[-1])
+            git("checkout", "-q", DEV_BRANCH)
+            git("checkout", "-q", "-b", branch)
 
-        merged_back = False
-        if dev_position > created_at:
-            git("merge", "--no-ff", "-q", DEV_BRANCH, "-m",
-                f"Merge development into {branch}", env={
-                    "GIT_AUTHOR_NAME": AUTHORS[author][0],
-                    "GIT_AUTHOR_EMAIL": AUTHORS[author][1],
-                    "GIT_COMMITTER_NAME": AUTHORS[author][0],
-                    "GIT_COMMITTER_EMAIL": AUTHORS[author][1],
-                    "GIT_AUTHOR_DATE": stamp(times[-1] + dt.timedelta(minutes=20)),
-                    "GIT_COMMITTER_DATE": stamp(times[-1] + dt.timedelta(minutes=20)),
-                })
-            merged_back = True
+            for (subject, paths), when in zip(commits, times):
+                for path in paths:
+                    data = content[path]
+                    if ticket in BEFORE_FIX and path == BEFORE_FIX[ticket][0]:
+                        pass                # the fix restores the final content
+                    elif any(path == spec[0] and k != ticket
+                             for k, spec in BEFORE_FIX.items()):
+                        owner = next(k for k, spec in BEFORE_FIX.items()
+                                     if spec[0] == path)
+                        data = apply_before(owner, path, data)
+                    write(path, data)
+                commit(f"{ticket}: {subject}", "", author, when)
 
-        git("checkout", "-q", DEV_BRANCH)
-        merge_when = times[-1] + dt.timedelta(minutes=40)
-        git("merge", "--no-ff", "-q", branch, "-m",
-            f"Merge branch '{branch}' into {DEV_BRANCH}\n\n"
-            f"{ticket}: {issue['summary']}", env={
-                "GIT_AUTHOR_NAME": AUTHORS[author][0],
-                "GIT_AUTHOR_EMAIL": AUTHORS[author][1],
-                "GIT_COMMITTER_NAME": AUTHORS[author][0],
-                "GIT_COMMITTER_EMAIL": AUTHORS[author][1],
-                "GIT_AUTHOR_DATE": stamp(merge_when),
-                "GIT_COMMITTER_DATE": stamp(merge_when),
-            })
-        dev_position += 1
-        branches.append((branch, merged_back))
+            if ticket == SWEEP[0] and unassigned:
+                for path in unassigned:
+                    write(path, content[path])
+                commit(f"{ticket}: {SWEEP[1]}", "", author, times[-1])
+
+            cut.append((branch, ticket, author, times[-1]))
+
+        for index, (branch, ticket, author, last) in enumerate(cut):
+            issue = ISSUE[ticket]
+            merged_back = False
+
+            if index:                       # development has moved since the cut
+                git("checkout", "-q", branch)
+                when = last + dt.timedelta(minutes=20)
+                git("merge", "--no-ff", "-q", DEV_BRANCH, "-m",
+                    f"Merge {DEV_BRANCH} into {branch}\n\n"
+                    f"Bring {ticket} up to date with {sprint} before review.",
+                    env=identity(author, when))
+                merged_back = True
+
+            git("checkout", "-q", DEV_BRANCH)
+            when = last + dt.timedelta(minutes=40)
+            git("merge", "--no-ff", "-q", branch, "-m",
+                f"Merge branch '{branch}' into {DEV_BRANCH}\n\n"
+                f"{ticket}: {issue['summary']}", env=identity(author, when))
+            branches.append((branch, merged_back))
+
+    git("checkout", "-q", DEV_BRANCH)
 
     # drop the placeholder so the tree matches main exactly
     git("rm", "-q", "--", ".gitkeep-development")
