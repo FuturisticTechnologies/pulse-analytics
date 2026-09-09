@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>PulseAnalytics — Software Architecture Document</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main id="doc">
+
+<!-- ==================================================================== -->
+<!-- COVER                                                                -->
+<!-- ==================================================================== -->
+<section class="cover">
+  <div class="eyebrow">Software Architecture Document</div>
+  <h1>PulseAnalytics</h1>
+  <div class="subtitle">Real-time business analytics platform<br>Architecture, data model and design decisions</div>
+  <div class="rule"></div>
+  <table class="doc-control">
+    <tr><td>Document</td><td><strong>SAD-PA-001</strong> — Software Architecture Document</td></tr>
+    <tr><td>Version</td><td>2.0</td></tr>
+    <tr><td>Status</td><td>Baselined — describes the system as built</td></tr>
+    <tr><td>Date</td><td>27 August 2026</td></tr>
+    <tr><td>Owner</td><td>Data Platform team</td></tr>
+    <tr><td>Audience</td><td>Engineers, data analysts, architecture review, operations</td></tr>
+    <tr><td>Companion</td><td>BRD-PA-001 — Business Requirements Document</td></tr>
+    <tr><td>Reproducing this</td><td><code>cd docs/build &amp;&amp; npm install &amp;&amp; npm run build</code></td></tr>
+  </table>
+  <p class="legend" style="margin-top:12mm">
+    Every diagram in this document describes the system as it is implemented in
+    the repository. Where something is designed but not yet built, the diagram
+    and the text say so explicitly rather than leaving the reader to discover it.
+  </p>
+</section>
+
+<!-- ==================================================================== -->
+<!-- CONTENTS                                                             -->
+<!-- ==================================================================== -->
+<section class="toc">
+<h1 class="plain">Contents</h1>
+<ol>
+  <li class="toc-1"><span class="n">1</span><span>Introduction</span><span class="fill"></span><span class="pg" data-toc-for="s-intro"></span></li>
+  <li class="toc-2"><span class="n">1.1</span><span>Purpose and audience</span><span class="fill"></span><span class="pg" data-toc-for="s-purpose"></span></li>
+  <li class="toc-2"><span class="n">1.2</span><span>Scope</span><span class="fill"></span><span class="pg" data-toc-for="s-scope"></span></li>
+  <li class="toc-2"><span class="n">1.3</span><span>Definitions</span><span class="fill"></span><span class="pg" data-toc-for="s-defs"></span></li>
+
+  <li class="toc-1"><span class="n">2</span><span>Project description</span><span class="fill"></span><span class="pg" data-toc-for="s-project"></span></li>
+  <li class="toc-2"><span class="n">2.1</span><span>What the platform does</span><span class="fill"></span><span class="pg" data-toc-for="s-what"></span></li>
+  <li class="toc-2"><span class="n">2.2</span><span>System context</span><span class="fill"></span><span class="pg" data-toc-for="s-context"></span></li>
+  <li class="toc-2"><span class="n">2.3</span><span>Capabilities delivered</span><span class="fill"></span><span class="pg" data-toc-for="s-caps"></span></li>
+
+  <li class="toc-1"><span class="n">3</span><span>Architectural drivers</span><span class="fill"></span><span class="pg" data-toc-for="s-drivers"></span></li>
+  <li class="toc-2"><span class="n">3.1</span><span>Quality attribute scenarios</span><span class="fill"></span><span class="pg" data-toc-for="s-qas"></span></li>
+  <li class="toc-2"><span class="n">3.2</span><span>Constraints</span><span class="fill"></span><span class="pg" data-toc-for="s-constraints"></span></li>
+
+  <li class="toc-1"><span class="n">4</span><span>Container view</span><span class="fill"></span><span class="pg" data-toc-for="s-containers"></span></li>
+  <li class="toc-1"><span class="n">5</span><span>Component view</span><span class="fill"></span><span class="pg" data-toc-for="s-components"></span></li>
+  <li class="toc-2"><span class="n">5.1</span><span>Layering and dependency rules</span><span class="fill"></span><span class="pg" data-toc-for="s-layers"></span></li>
+
+  <li class="toc-1"><span class="n">6</span><span>Logical view</span><span class="fill"></span><span class="pg" data-toc-for="s-logical"></span></li>
+  <li class="toc-2"><span class="n">6.1</span><span>Core abstractions</span><span class="fill"></span><span class="pg" data-toc-for="s-classes"></span></li>
+
+  <li class="toc-1"><span class="n">7</span><span>Data view</span><span class="fill"></span><span class="pg" data-toc-for="s-data"></span></li>
+  <li class="toc-2"><span class="n">7.1</span><span>Medallion layers</span><span class="fill"></span><span class="pg" data-toc-for="s-medallion"></span></li>
+  <li class="toc-2"><span class="n">7.2</span><span>The star schema</span><span class="fill"></span><span class="pg" data-toc-for="s-star"></span></li>
+  <li class="toc-2"><span class="n">7.3</span><span>Grain and additivity</span><span class="fill"></span><span class="pg" data-toc-for="s-grain"></span></li>
+
+  <li class="toc-1"><span class="n">8</span><span>Process view</span><span class="fill"></span><span class="pg" data-toc-for="s-process"></span></li>
+  <li class="toc-2"><span class="n">8.1</span><span>Batch pipeline execution</span><span class="fill"></span><span class="pg" data-toc-for="s-seqbatch"></span></li>
+  <li class="toc-2"><span class="n">8.2</span><span>Real-time event flow</span><span class="fill"></span><span class="pg" data-toc-for="s-seqrt"></span></li>
+  <li class="toc-2"><span class="n">8.3</span><span>Data-quality gate</span><span class="fill"></span><span class="pg" data-toc-for="s-dq"></span></li>
+  <li class="toc-2"><span class="n">8.4</span><span>Domain state models</span><span class="fill"></span><span class="pg" data-toc-for="s-states"></span></li>
+
+  <li class="toc-1"><span class="n">9</span><span>Deployment view</span><span class="fill"></span><span class="pg" data-toc-for="s-deploy"></span></li>
+  <li class="toc-2"><span class="n">9.1</span><span>Local and rehearsal topology</span><span class="fill"></span><span class="pg" data-toc-for="s-deploylocal"></span></li>
+  <li class="toc-2"><span class="n">9.2</span><span>Azure topology</span><span class="fill"></span><span class="pg" data-toc-for="s-deployazure"></span></li>
+  <li class="toc-2"><span class="n">9.3</span><span>Delivery pipeline</span><span class="fill"></span><span class="pg" data-toc-for="s-cicd"></span></li>
+
+  <li class="toc-1"><span class="n">10</span><span>Cross-cutting concerns</span><span class="fill"></span><span class="pg" data-toc-for="s-crosscut"></span></li>
+  <li class="toc-1"><span class="n">11</span><span>Architecture decision record</span><span class="fill"></span><span class="pg" data-toc-for="s-adr"></span></li>
+  <li class="toc-1"><span class="n">12</span><span>Risks and technical debt</span><span class="fill"></span><span class="pg" data-toc-for="s-risks"></span></li>
+  <li class="toc-1"><span class="n">13</span><span>Verification</span><span class="fill"></span><span class="pg" data-toc-for="s-verify"></span></li>
+</ol>
+<p class="legend" style="margin-top:8mm">
+  Figures are numbered by section. Page numbers are measured from the rendered
+  document rather than estimated, so they cannot drift from the body.
+</p>
+</section>
+
+<!-- ==================================================================== -->
+<h1 id="s-intro">Introduction</h1>
+
+<h2 id="s-purpose">Purpose and audience</h2>
+<p class="lead">
+  This document describes the architecture of PulseAnalytics: what it is built
+  from, how those parts fit together, and — most importantly — why each
+  significant decision was taken and what it cost.
+</p>
+<p>
+  It is written for four readers. An <strong>engineer</strong> joining the team
+  should be able to locate any behaviour from the component and logical views. A
+  <strong>data analyst</strong> should be able to trust a number by tracing it
+  from the dashboard back through the marts to the source. An
+  <strong>architecture reviewer</strong> should be able to challenge the
+  decisions in section 11 on their stated trade-offs. An
+  <strong>operator</strong> should be able to reason about failure from the
+  process and deployment views.
+</p>
+<div class="note">
+  <span class="label">On the tone of this document</span>
+  Sections that record a decision also record what was given up to get it, and
+  what would have to change for the decision to be revisited. An architecture
+  document that lists only benefits is a sales document.
+</div>
+
+<h2 id="s-scope">Scope</h2>
+<p>
+  In scope: the ingestion, warehousing, analytical and presentation components
+  of PulseAnalytics; its data model; its runtime and deployment topologies; and
+  the delivery pipeline that puts it into an environment.
+</p>
+<p>
+  Out of scope: the internals of the source systems that feed it; the commercial
+  content of the analyses themselves (covered by the companion BRD); and the
+  Power BI report layouts, which are specified as text in
+  <code>dashboards/powerbi/</code>.
+</p>
+
+<h2 id="s-defs">Definitions</h2>
+<table class="data">
+  <caption>Terms used throughout this document</caption>
+  <thead><tr><th style="width:34mm">Term</th><th>Meaning in this system</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Medallion</strong></td><td>The bronze → silver → gold layering. Bronze lands raw, silver cleans and conforms, gold serves.</td></tr>
+    <tr><td><strong>Grain</strong></td><td>What one row of a fact table represents. Stated explicitly for all five facts in section 7.3.</td></tr>
+    <tr><td><strong>Conformed dimension</strong></td><td>A dimension shared by more than one fact, so measures from different facts can be compared along it.</td></tr>
+    <tr><td><strong>Unknown member</strong></td><td>The <code>-1</code> row present in every dimension, so a fact never loses a row to a failed join.</td></tr>
+    <tr><td><strong>Semi-additive</strong></td><td>A measure that can be summed across some dimensions but not others. Stock sums across products, never across dates.</td></tr>
+    <tr><td><strong>Analysis anchor</strong></td><td><code>gold.analysis_window.as_of_date</code> — the latest date in the data, used as "today" by every recency metric.</td></tr>
+    <tr><td><strong>Event time</strong></td><td>When an event happened, as opposed to when it was processed. All streaming windows use event time.</td></tr>
+    <tr><td><strong>Reconciliation check</strong></td><td>A data-quality check that computes one number two independent ways and requires them to agree.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="s-project">Project description</h1>
+
+<h2 id="s-what">What the platform does</h2>
+<p>
+  PulseAnalytics turns two years of retail trading history and a live event
+  stream into decisions. It ingests a nightly batch extract from an order
+  management system, four continuous event streams, and one external API; lands
+  and cleans them through a medallion warehouse; models them as a Kimball star
+  schema; and serves the result through five role-specific dashboards, a
+  real-time HTTP API, a set of analytical models, and a Power BI semantic model.
+</p>
+<p>
+  The system is built so that it runs identically on a laptop with no
+  infrastructure at all, on Docker with PostgreSQL and Kafka, and on Azure. Only
+  environment variables differ. That property is not a convenience — it is the
+  mechanism by which the local demonstration is a faithful rehearsal of
+  production rather than a separate program that resembles it.
+</p>
+
+<h2 id="s-context">System context</h2>
+<figure>
+  <div class="mermaid" data-diagram="context"></div>
+  <figcaption>System context
+    <span class="desc">Five human roles consume the platform; five external systems feed it. The FX service is the only dependency the platform will continue without, by design.</span>
+  </figcaption>
+</figure>
+
+<h2 id="s-caps">Capabilities delivered</h2>
+<table class="data">
+  <caption>Capabilities, and where each is implemented</caption>
+  <thead><tr><th style="width:34mm">Capability</th><th>Description</th><th style="width:44mm">Implementation</th></tr></thead>
+  <tbody>
+    <tr><td>Synthetic history</td><td>Two years of deterministic, internally consistent trading data with seasonality, churn, payment failures and a controlled amount of dirty data</td><td><code>data-generator/</code></td></tr>
+    <tr><td>Batch ingestion</td><td>Nightly extract plus an external FX feed that degrades rather than fails</td><td><code>etl/extract/</code>, <code>etl/load/</code></td></tr>
+    <tr><td>Warehouse</td><td>Medallion layers, star schema, 23 marts, all in portable SQL</td><td><code>database/</code></td></tr>
+    <tr><td>Data quality</td><td>64 checks over six dimensions, with reconciliation and a falsifiability test</td><td><code>etl/quality/</code></td></tr>
+    <tr><td>Real time</td><td>Four correlated topics, at-least-once delivery, event-time windows</td><td><code>streaming/</code></td></tr>
+    <tr><td>Analytical models</td><td>Segmentation, churn, CLV, basket affinity, attribution, inventory optimisation, forecasting</td><td><code>analytics/</code></td></tr>
+    <tr><td>Presentation</td><td>Five dashboards under one design system, a real-time API, a Power BI model</td><td><code>dashboards/</code></td></tr>
+    <tr><td>Delivery</td><td>CI on every push; OIDC deployment to Azure with approval gates and rollback</td><td><code>.github/</code>, <code>infrastructure/</code></td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="s-drivers">Architectural drivers</h1>
+<p>
+  The architecture is shaped far more by the quality attributes below than by
+  the functional requirements. Any competent design satisfies the functional
+  list; these are what discriminate between designs.
+</p>
+
+<h2 id="s-qas">Quality attribute scenarios</h2>
+<table class="data">
+  <caption>Quality attribute scenarios and the mechanisms that satisfy them</caption>
+  <thead><tr><th class="id">ID</th><th style="width:26mm">Attribute</th><th>Scenario and response measure</th><th style="width:52mm">Architectural mechanism</th></tr></thead>
+  <tbody>
+    <tr><td class="id">QA-01</td><td>Correctness</td><td>An aggregate mart drifts from the fact it is built on. The discrepancy is detected on the run that introduces it, before publication.</td><td>Five reconciliation checks compute revenue two independent ways; a mismatch beyond 0.01% fails the run with exit code 2.</td></tr>
+    <tr><td class="id">QA-02</td><td>Reproducibility</td><td>A figure quoted in March is re-derived in September from the same dataset. It matches exactly.</td><td>Seeded generation; all recency metrics anchored to <code>analysis_window.as_of_date</code>, never the wall clock; deterministic model seeds.</td></tr>
+    <tr><td class="id">QA-03</td><td>Portability</td><td>The warehouse moves from DuckDB to PostgreSQL. No transformation logic changes.</td><td>SQL restricted to the portable subset; a single dialect-adaptation point in <code>Database._adapt</code>; CI builds the whole warehouse on PostgreSQL every push.</td></tr>
+    <tr><td class="id">QA-04</td><td>Observability</td><td>A stage fails overnight. The operator can identify which stage, how long it ran, how many rows it moved and what the error was, without reading a terminal.</td><td><code>ops.pipeline_runs</code> written per stage; <code>ops.data_quality_results</code> per check; both surfaced on the Operations dashboard and the API.</td></tr>
+    <tr><td class="id">QA-05</td><td>Resilience</td><td>The external FX endpoint is unreachable. The pipeline completes and the substitution is visible to consumers.</td><td>Deterministic fallback curve; every row stamped <code>source='fallback'</code>; the dashboard displays the source alongside the rate.</td></tr>
+    <tr><td class="id">QA-06</td><td>Durability</td><td>The stream consumer crashes mid-batch. No event is lost.</td><td>Offsets committed only after a successful write (at-least-once); <code>event_id</code> retained for downstream de-duplication.</td></tr>
+    <tr><td class="id">QA-07</td><td>Recoverability</td><td>A production release is found to be faulty. The previous version is restored in minutes.</td><td>Every deployable tagged with its git SHA and retained in the registry; rollback is a redeploy, not a rebuild.</td></tr>
+    <tr><td class="id">QA-08</td><td>Modifiability</td><td>A metric definition changes. Every surface that quotes it changes together.</td><td>One definition per metric, in SQL; Python and DAX consume the marts; CI asserts documented metrics exist in the SQL.</td></tr>
+    <tr><td class="id">QA-09</td><td>Testability</td><td>A change to a mart breaks a downstream assumption. It fails in CI, not in a meeting.</td><td>223 tests against a real warehouse built from real generated data rather than mocks.</td></tr>
+    <tr><td class="id">QA-10</td><td>Usability</td><td>A reader with a colour-vision deficiency reads any chart. No meaning is lost.</td><td>Fixed CVD-safe categorical order, never cycled; legend always present; direction carried by glyph and sign as well as colour.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s-constraints">Constraints</h2>
+<table class="data">
+  <caption>Constraints on the design</caption>
+  <thead><tr><th class="id">ID</th><th style="width:30mm">Constraint</th><th>Consequence for the architecture</th></tr></thead>
+  <tbody>
+    <tr><td class="id">C-01</td><td>Zero-install local run</td><td>The default engine is an embedded database and the default event bus is a file. Neither Docker nor a broker may be required to exercise any capability.</td></tr>
+    <tr><td class="id">C-02</td><td>No heavyweight ML dependencies</td><td>Models are implemented on numpy and pandas alone. This keeps the container small and the mathematics auditable, at the cost of writing k-means and logistic regression by hand.</td></tr>
+    <tr><td class="id">C-03</td><td>Two-person team</td><td>Operational surface must stay small. This is the main reason no orchestrator is deployed: one linear DAG with a run log is within the team's capacity to operate; Airflow is not.</td></tr>
+    <tr><td class="id">C-04</td><td>Source data quality is imperfect and will stay so</td><td>Bronze must never reject a row; quality thresholds must encode accepted realities rather than aspirations.</td></tr>
+    <tr><td class="id">C-05</td><td>Attribution limited to last touch</td><td>The source records one campaign per order. Multi-touch models are reconstructed from clickstream and published side by side rather than presented as fact.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="s-containers">Container view</h1>
+<p>
+  The deployable and runnable units, and the data stores between them. Each
+  container is independently startable: the batch pipeline, the producer, the
+  consumer, the dashboards and the API are five separate processes that
+  communicate only through the event bus and the warehouse.
+</p>
+<figure>
+  <div class="mermaid" data-diagram="containers"></div>
+  <figcaption>Container view
+    <span class="desc">The warehouse and the event bus are the only integration points. No container calls another directly, which is what allows any of them to be restarted independently.</span>
+  </figcaption>
+</figure>
+<div class="decision">
+  <span class="label">Why the consumer writes to a table rather than holding state</span>
+  The dashboard, the API and the consumer are three separate processes, so
+  shared state has to be durable and queryable. Restarting the consumer must not
+  blank the dashboard, and retaining the window's history is what lets the live
+  page draw a trend rather than display a single number.
+</div>
+
+<!-- ==================================================================== -->
+<h1 id="s-components">Component view</h1>
+<p>
+  Figure 5.1 is a UML component diagram: it shows provided and required
+  interfaces rather than merely which module calls which. The distinction
+  matters here, because two of the interfaces are the seams that make the whole
+  portability story work.
+</p>
+<figure class="full-page">
+  <div class="uml" data-svg="components"></div>
+  <figcaption>Component diagram with provided and required interfaces
+    <span class="desc">
+      <code>IDatabase</code> and <code>IEventBus</code> are the two seams. Every
+      component that touches storage does so through the <code>Database</code>
+      facade, and every component that touches the bus does so through
+      <code>EventBus</code> — so swapping DuckDB for PostgreSQL, or files for
+      Kafka, changes one implementation class and nothing else.
+    </span>
+  </figcaption>
+</figure>
+
+<h2 id="s-layers">Layering and dependency rules</h2>
+<p>
+  Dependencies point downward only. Presentation may depend on curated access;
+  curated access may depend on the transformation layer; nothing depends upward.
+  The cross-cutting quality and run-context components observe the layers they
+  instrument without being depended on by them.
+</p>
+<figure>
+  <div class="mermaid" data-diagram="layers"></div>
+  <figcaption>Layering and permitted dependency directions
+    <span class="desc">The rule that carries the most weight: every business definition lives in the transformation layer, so analysis and presentation cannot invent their own.</span>
+  </figcaption>
+</figure>
+
+<!-- ==================================================================== -->
+<h1 id="s-logical">Logical view</h1>
+
+<h2 id="s-classes">Core abstractions</h2>
+<p>
+  The runtime has a deliberately small number of abstractions. Two of them —
+  <code>Database</code> and <code>EventBus</code> — carry the portability
+  requirement; the rest exist to make the pipeline observable and testable.
+</p>
+<figure class="full-page">
+  <div class="mermaid" data-diagram="classes"></div>
+  <figcaption>Class diagram of the core runtime abstractions
+    <span class="desc">
+      <code>EventBus</code> is the only abstract type in the system. Everything
+      else is concrete, because a second implementation was never needed and an
+      interface with one implementation is a liability rather than a design.
+    </span>
+  </figcaption>
+</figure>
+<table class="data">
+  <caption>Responsibilities of the core types</caption>
+  <thead><tr><th style="width:44mm">Type</th><th>Responsibility and the reason it exists</th></tr></thead>
+  <tbody>
+    <tr><td><code>Database</code></td><td>The single point at which SQL meets an engine. Holds the only dialect-translation logic in the system, which is why portability is a small ongoing cost rather than a rewrite.</td></tr>
+    <tr><td><code>EventBus</code></td><td>Abstract publish/consume with committed offsets. The file implementation is not a mock — it is a durable, replayable, ordered log, which is what makes the local demonstration meaningful.</td></tr>
+    <tr><td><code>StreamConsumer</code></td><td>Micro-batches events into the warehouse and commits offsets afterwards. Owns no metric definitions; that is what keeps "revenue" from meaning two things.</td></tr>
+    <tr><td><code>RealtimeKpiProcessor</code></td><td>Computes the rolling window in event time and persists each computation, so the live page survives a consumer restart.</td></tr>
+    <tr><td><code>Check</code></td><td>One data-quality assertion reduced to a single shape: count failing rows and total rows. That uniformity is why the runner needs no special cases and a new check is three lines of SQL.</td></tr>
+    <tr><td><code>RunContext</code></td><td>Times each stage and records it to <code>ops.pipeline_runs</code>. Deliberately swallows its own persistence errors — a broken audit table must never roll back a good data load.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="s-data">Data view</h1>
+
+<h2 id="s-medallion">Medallion layers</h2>
+<table class="data">
+  <caption>Layer responsibilities and the rules that apply to each</caption>
+  <thead><tr><th style="width:22mm">Layer</th><th style="width:34mm">Grain</th><th>Rules</th></tr></thead>
+  <tbody>
+    <tr><td><strong>bronze</strong></td><td>As the source sent it</td><td>No NOT NULL, no keys, wide types. <strong>Never rejects a row.</strong> Lineage columns on every row.</td></tr>
+    <tr><td><strong>silver</strong></td><td>One row per business entity</td><td>Trimmed, typed, de-duplicated, conformed. Every repair is flagged on the row and asserted by a check.</td></tr>
+    <tr><td><strong>gold</strong></td><td>Star schema and marts</td><td>What every consumer queries. One definition per metric.</td></tr>
+    <tr><td><strong>ops</strong></td><td>Platform metadata</td><td>Append-only. Created with <code>CREATE TABLE IF NOT EXISTS</code> so a full refresh cannot destroy the run log or the streaming landing zone.</td></tr>
+  </tbody>
+</table>
+<div class="decision">
+  <span class="label">Why bronze rejects nothing</span>
+  If the source sends garbage it is landed and <em>counted</em>, rather than
+  vanishing into a filter nobody remembers writing. Every quality question about
+  the source is then answerable from the warehouse itself. The cost is that
+  bronze row counts exceed silver row counts, which has to be explained once to
+  every new reader — a much smaller cost than unexplained missing revenue.
+</div>
+
+<h2 id="s-star">The star schema</h2>
+<figure class="full-page">
+  <div class="mermaid" data-diagram="starSchema"></div>
+  <figcaption>Entity-relationship view of the gold layer
+    <span class="desc">
+      Eight dimensions (seven conformed plus an SCD Type 2 customer history) and
+      five facts at three different grains. Attributes are limited to keys and
+      the measures referenced elsewhere in this document; the full column list is
+      in <code>docs/data-model.md</code>.
+    </span>
+  </figcaption>
+</figure>
+
+<h2 id="s-grain">Grain and additivity</h2>
+<table class="data">
+  <caption>Fact grain, additivity and the error each choice prevents</caption>
+  <thead><tr><th style="width:40mm">Fact</th><th style="width:34mm">Grain</th><th style="width:28mm">Additivity</th><th>Why it is modelled this way</th></tr></thead>
+  <tbody>
+    <tr><td><code>fact_sales</code></td><td>One order line</td><td>Fully additive</td><td>The atomic fact. Every product, category and margin aggregate derives from it.</td></tr>
+    <tr><td><code>fact_orders</code></td><td>One order header</td><td>Fully additive</td><td>Order-level measures cannot be summed from lines without double counting, and <em>averaging</em> lines answers a different question. Keeping both grains explicit makes average order value impossible to compute wrongly.</td></tr>
+    <tr><td><code>fact_payments</code></td><td>One payment attempt</td><td>Fully additive</td><td>Retaining every attempt is what allows recoverable declines to be distinguished from lost ones.</td></tr>
+    <tr><td><code>fact_inventory</code></td><td>One product per week</td><td><strong>Semi-additive</strong></td><td>A periodic snapshot. Summing stock over weeks reports inventory the business never held — the most common inventory reporting error, prevented structurally here.</td></tr>
+    <tr><td><code>fact_customer_events</code></td><td>One clickstream event</td><td>Fully additive</td><td>Behavioural facts share the star with transactional ones, so view-to-purchase questions need no cross-system join.</td></tr>
+  </tbody>
+</table>
+<div class="warn">
+  <span class="label">Semi-additivity is enforced in three places</span>
+  The inventory mart reads only the latest snapshot per product, so it cannot
+  express the wrong number; a test asserts one row per product; and the DAX
+  measure uses <code>LASTDATE</code>. A convention documented in one place would
+  eventually be violated.
+</div>
+
+<!-- ==================================================================== -->
+<h1 id="s-process">Process view</h1>
+
+<h2 id="s-seqbatch">Batch pipeline execution</h2>
+<figure class="full-page">
+  <div class="mermaid" data-diagram="seqBatch"></div>
+  <figcaption>Sequence — a full batch pipeline run
+    <span class="desc">
+      Note the two exit codes. CI distinguishes "the code broke" (exit 1) from
+      "the data is bad" (exit 2), because those go to different people.
+    </span>
+  </figcaption>
+</figure>
+
+<h2 id="s-seqrt">Real-time event flow</h2>
+<figure class="full-page">
+  <div class="mermaid" data-diagram="seqRealtime"></div>
+  <figcaption>Sequence — event production, consumption and KPI computation
+    <span class="desc">
+      Two properties are load-bearing: offsets commit only after a successful
+      write, and windows are measured in event time. Together they make a
+      replayed stream reproduce exactly the KPIs it produced live, which is what
+      makes the real-time layer testable at all.
+    </span>
+  </figcaption>
+</figure>
+
+<h2 id="s-dq">Data-quality gate</h2>
+<figure>
+  <div class="mermaid" data-diagram="actQuality"></div>
+  <figcaption>Activity — evaluating the data-quality suite
+    <span class="desc">A check whose own SQL raises is recorded as a failed check rather than propagated: one broken assertion must not hide the other sixty-three.</span>
+  </figcaption>
+</figure>
+
+<h2 id="s-states">Domain state models</h2>
+<figure>
+  <div class="mermaid" data-diagram="stateOrder"></div>
+  <figcaption>State machine — order lifecycle
+    <span class="desc">Only <code>Completed</code> contributes to revenue. Other states are retained and flagged, never deleted.</span>
+  </figcaption>
+</figure>
+<figure>
+  <div class="mermaid" data-diagram="stateCustomer"></div>
+  <figcaption>State machine — customer lifecycle
+    <span class="desc">Transitions are evaluated against the analysis anchor, not the wall clock, so a customer's state is reproducible from a given dataset.</span>
+  </figcaption>
+</figure>
+
+<!-- ==================================================================== -->
+<h1 id="s-deploy">Deployment view</h1>
+
+<h2 id="s-deploylocal">Local and rehearsal topology</h2>
+<figure>
+  <div class="mermaid" data-diagram="deployLocal"></div>
+  <figcaption>Deployment — local workstation, with the optional Docker rehearsal
+    <span class="desc">The dashed paths are the same processes pointed at PostgreSQL and Redpanda by two environment variables. No application code differs.</span>
+  </figcaption>
+</figure>
+
+<h2 id="s-deployazure">Azure topology</h2>
+<figure class="full-page">
+  <div class="uml" data-svg="deployAzure"></div>
+  <figcaption>UML deployment diagram — the Azure target environment
+    <span class="desc">
+      Both container apps run the <em>same</em> image and differ only by command,
+      exactly as they do in docker-compose. One image means one build, one scan
+      and one promotion.
+    </span>
+  </figcaption>
+</figure>
+<table class="data">
+  <caption>Mapping between the local and Azure topologies</caption>
+  <thead><tr><th style="width:48mm">Local</th><th style="width:52mm">Azure</th><th>What changes in the code</th></tr></thead>
+  <tbody>
+    <tr><td><code>data/raw/*.csv</code></td><td>ADLS Gen2, container <code>bronze</code></td><td><code>PULSE_RAW_DIR</code></td></tr>
+    <tr><td>DuckDB file / <code>postgres:16-alpine</code></td><td>PostgreSQL Flexible Server 16</td><td><code>POSTGRES_HOST</code>, <code>POSTGRES_SSLMODE</code></td></tr>
+    <tr><td>NDJSON files / Redpanda</td><td>Event Hubs (Kafka protocol)</td><td><code>PULSE_KAFKA_BROKERS</code> and SASL</td></tr>
+    <tr><td><code>python -m etl.pipeline</code></td><td>Databricks job running that module</td><td>nothing</td></tr>
+    <tr><td>Streamlit and FastAPI locally</td><td>Two Container Apps from one image</td><td>nothing</td></tr>
+  </tbody>
+</table>
+<div class="warn">
+  <span class="label">Why PostgreSQL and not Azure SQL</span>
+  The application supports exactly two engines: DuckDB and PostgreSQL.
+  Provisioning Azure SQL would create a database the platform cannot connect to,
+  and the "same code runs everywhere" property would be false at the one point
+  where it matters. This was corrected during the deployment work; the
+  configuration previously provisioned Azure SQL while emitting PostgreSQL
+  connection settings.
+</div>
+
+<h2 id="s-cicd">Delivery pipeline</h2>
+<figure>
+  <div class="mermaid" data-diagram="actPipeline"></div>
+  <figcaption>Activity — continuous integration and delivery gates
+    <span class="desc">Production is never applied automatically, and the plan a reviewer approves is the plan that is applied.</span>
+  </figcaption>
+</figure>
+<figure class="full-page">
+  <div class="mermaid" data-diagram="seqDeploy"></div>
+  <figcaption>Sequence — promoting a release to production
+    <span class="desc">
+      The image is imported, never rebuilt. A rebuild would produce a different
+      artefact from the one dev verified, which is where "works in dev, fails in
+      prod" begins.
+    </span>
+  </figcaption>
+</figure>
+
+<!-- ==================================================================== -->
+<h1 id="s-crosscut">Cross-cutting concerns</h1>
+<table class="data">
+  <caption>Cross-cutting concerns and their treatment</caption>
+  <thead><tr><th style="width:32mm">Concern</th><th>Treatment</th></tr></thead>
+  <tbody>
+    <tr><td>Configuration</td><td>One module, <code>pulse.config</code>, read once at import. Every setting has a working default, so the platform runs with no configuration at all. Environment variables are the only override mechanism, which is what makes the same image work in every environment.</td></tr>
+    <tr><td>Logging</td><td>Consistent format, level from <code>PULSE_LOG_LEVEL</code>. Pipeline stages log start and duration through a context manager rather than by hand, so no stage can silently omit its timing.</td></tr>
+    <tr><td>Error handling</td><td>Failures propagate after being recorded. Two exceptions are deliberate: a data-quality check that raises is recorded as a failure rather than aborting the suite, and run-metadata persistence swallows its own errors.</td></tr>
+    <tr><td>Idempotency</td><td>The whole pipeline is a full rebuild and can be re-run safely. The FX loader deletes the date range it is about to write. A test asserts two consecutive runs produce identical row counts.</td></tr>
+    <tr><td>Secrets</td><td>Never in source, never in Terraform outputs, never in a committed tfvars. Connection strings are written to Key Vault by the infrastructure and read by managed identity. Deployment uses OIDC, so no long-lived credential exists to leak.</td></tr>
+    <tr><td>Observability</td><td>Two layers: <code>ops.*</code> answers "what did the pipeline do", Application Insights answers "what is the platform doing now". Neither replaces the other.</td></tr>
+    <tr><td>Accessibility</td><td>A fixed CVD-safe categorical palette that is never cycled; a legend always present for two or more series; direction carried by glyph and sign as well as colour. Enforced by tests over the dashboard sources.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="s-adr">Architecture decision record</h1>
+<p>
+  Each decision below records the alternative that was rejected and the cost of
+  the choice. A decision with no cost was not a decision.
+</p>
+<table class="data">
+  <caption>Architecture decisions</caption>
+  <thead><tr><th class="id">ID</th><th style="width:40mm">Decision</th><th>Rationale, alternative rejected, and cost</th></tr></thead>
+  <tbody>
+    <tr><td class="id">ADR-01</td><td>Medallion layering rather than a single transformation</td><td>Three layers isolate "why is this number wrong" to one stage. <em>Rejected:</em> one transformation step. <em>Cost:</em> roughly three times the SQL, and bronze/silver row counts differ in ways that need explaining.</td></tr>
+    <tr><td class="id">ADR-02</td><td>Transformations in SQL; models in Python</td><td>SQL is what the warehouse executes, runs unchanged on four engines, and is readable by analysts who do not write Python. Python takes only what needs iteration or linear algebra. <em>Cost:</em> two languages in one pipeline.</td></tr>
+    <tr><td class="id">ADR-03</td><td>Two order grains (<code>fact_sales</code> and <code>fact_orders</code>)</td><td>Prevents an entire class of aggregation error structurally. <em>Rejected:</em> deriving order measures from lines. <em>Cost:</em> a second fact to maintain and reconcile — which the reconciliation checks then do automatically.</td></tr>
+    <tr><td class="id">ADR-04</td><td>Anchor recency to the data, not the clock</td><td>Makes every segment, cohort and report reproducible. <em>Rejected:</em> <code>CURRENT_DATE</code>. <em>Cost:</em> one extra table, and a live deployment must repoint it.</td></tr>
+    <tr><td class="id">ADR-05</td><td>Flags rather than filters for non-revenue orders</td><td>Operations needs cancellations and returns; revenue excludes them by flag. <em>Rejected:</em> deleting them in silver. <em>Cost:</em> every revenue query must remember the flag — mitigated by defining revenue once.</td></tr>
+    <tr><td class="id">ADR-06</td><td>Unknown member (<code>-1</code>) in every dimension</td><td>A failed join becomes a countable number instead of a silent shortfall. <em>Cost:</em> every dimension carries a synthetic row that must be excluded from dimension-level reporting.</td></tr>
+    <tr><td class="id">ADR-07</td><td>Non-zero data-quality thresholds</td><td>A suite that fires nightly on known, accepted realities gets muted, and a muted suite catches nothing. <em>Rejected:</em> zero tolerance everywhere. <em>Cost:</em> each threshold is a judgement that must be justified and reviewed.</td></tr>
+    <tr><td class="id">ADR-08</td><td>Event time, not wall-clock time, for stream windows</td><td>Makes the real-time layer reproducible and therefore testable. <em>Cost:</em> a stopped producer leaves the dashboard showing the last window rather than zero, which must be explained on the page.</td></tr>
+    <tr><td class="id">ADR-09</td><td><code>ops.*</code> survives a full refresh</td><td>A run log that does not outlive the run is not a run log, and a batch rebuild must not destroy the streaming landing zone. <em>Cost:</em> schema changes to <code>ops</code> require an explicit drop.</td></tr>
+    <tr><td class="id">ADR-10</td><td>No orchestrator</td><td>Six linear stages and one schedule are within a two-person team's operational capacity; Airflow is a service to run and explain. <em>Cost:</em> no retries, no backfill, no cross-DAG dependencies. Revisit at the second schedule.</td></tr>
+    <tr><td class="id">ADR-11</td><td>Full rebuild rather than incremental load</td><td>Eleven seconds on the demo dataset; incremental buys complexity nothing needs. <em>Cost:</em> does not scale past roughly one hour of rebuild. <code>ops.load_watermarks</code> exists for when it must.</td></tr>
+    <tr><td class="id">ADR-12</td><td>Models on numpy and pandas only</td><td>Auditable mathematics, small container. <em>Rejected:</em> scikit-learn. <em>Cost:</em> k-means, logistic regression and Holt-Winters are written and tested by hand.</td></tr>
+    <tr><td class="id">ADR-13</td><td>Linear churn model over a gradient-boosted one</td><td>Retention teams act on <em>why</em>, and coefficients are part of the deliverable. <em>Cost:</em> slightly lower AUC than the rejected alternative.</td></tr>
+    <tr><td class="id">ADR-14</td><td>Publish five attribution models rather than one</td><td>No model is correct; the spread between them is the finding. <em>Cost:</em> a reader must be told which one the warehouse ships, on every surface that quotes ROAS.</td></tr>
+    <tr><td class="id">ADR-15</td><td>Power BI model as text, no <code>.pbix</code> in version control</td><td>A binary that cannot be diffed or merged does not belong in git, and a stale one is worse than none. <em>Cost:</em> the report must be assembled by hand from <code>model.md</code> and <code>measures.dax</code>.</td></tr>
+    <tr><td class="id">ADR-16</td><td>PostgreSQL on Azure, not Azure SQL or Synapse</td><td>PostgreSQL is what the application speaks; Synapse is right past roughly a terabyte. <em>Cost:</em> a future Synapse migration is a DDL change and a bulk copy — real, but not free.</td></tr>
+    <tr><td class="id">ADR-17</td><td>Promote one image; never rebuild for production</td><td>A rebuild produces a different artefact from the one that was verified. <em>Cost:</em> a second registry and a cross-environment pull permission.</td></tr>
+    <tr><td class="id">ADR-18</td><td>Apply a saved plan to production</td><td>A re-plan between approval and apply can pick up an unreviewed change. <em>Cost:</em> the plan artefact contains sensitive values and must be treated as such.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="s-risks">Risks and technical debt</h1>
+<table class="data">
+  <caption>Known risks, technical debt and planned response</caption>
+  <thead><tr><th class="id">ID</th><th style="width:44mm">Risk or debt</th><th style="width:20mm">Severity</th><th>Response</th></tr></thead>
+  <tbody>
+    <tr><td class="id">R-01</td><td>Incrementality is estimated by a before/after baseline proxy</td><td><span class="pill must">High</span></td><td>Cannot separate a campaign from a seasonal upswing, and is used to argue about budget. Labelled as a proxy on every surface. A geo holdout or matched-market design is the real answer and requires marketing to agree to withhold spend.</td></tr>
+    <tr><td class="id">R-02</td><td>No orchestrator; no retry or backfill</td><td><span class="pill should">Medium</span></td><td>Accepted while there is one schedule. Stage boundaries and <code>ops.pipeline_runs</code> are already shaped so adding Dagster is a wrapper rather than a rewrite.</td></tr>
+    <tr><td class="id">R-03</td><td>SCD Type 2 has the shape but one version per customer</td><td><span class="pill should">Medium</span></td><td>The source ships no change history, so "revenue by the tier held at purchase time" is currently unanswerable. Needs change capture at source.</td></tr>
+    <tr><td class="id">R-04</td><td>Alerting is provisioned but nothing routes to it</td><td><span class="pill should">Medium</span></td><td>Deliberate: routing to a rota that does not exist is worse than not alerting. An organisational change precedes the technical one.</td></tr>
+    <tr><td class="id">R-05</td><td>Quality suite detects broken data, not drifted data</td><td><span class="pill should">Medium</span></td><td>A disappearing category or a shifted distribution passes every current check. <code>ops.data_quality_results</code> is the history to build profiling on.</td></tr>
+    <tr><td class="id">R-06</td><td>Public network access on PostgreSQL and the registry</td><td><span class="pill should">Medium</span></td><td>Mitigated by deny-by-default firewalls and enforced TLS. Private endpoints and a VNet are the next hardening step.</td></tr>
+    <tr><td class="id">R-07</td><td>Deploying principal holds unconstrained RBAC Administrator</td><td><span class="pill should">Medium</span></td><td>Needed because Terraform creates role assignments. Constrain with a condition limiting it to the specific roles required.</td></tr>
+    <tr><td class="id">R-08</td><td>Metric definitions exist in three implementations</td><td><span class="pill could">Low</span></td><td>SQL and Python are held together by reconciliation checks; the DAX side is verified by hand. A semantic layer collapses all three — worth doing at the fourth consumer.</td></tr>
+    <tr><td class="id">R-09</td><td>Prod plan artefact contains sensitive values</td><td><span class="pill could">Low</span></td><td>One-day retention, private repository. No more sensitive than the state file it was planned against.</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================================================================== -->
+<h1 id="s-verify">Verification</h1>
+<p>
+  The claims in this document are verifiable. Each row below names the mechanism
+  that proves it and where that mechanism lives.
+</p>
+<table class="data">
+  <caption>How each architectural claim is verified</caption>
+  <thead><tr><th style="width:52mm">Claim</th><th style="width:38mm">Verified by</th><th>Where</th></tr></thead>
+  <tbody>
+    <tr><td>Marts do not drift from their facts</td><td>Five reconciliation checks</td><td><code>etl/quality/suite.py</code>; <code>tests/test_warehouse.py</code></td></tr>
+    <tr><td>The SQL is portable</td><td>Whole warehouse built on PostgreSQL on every push</td><td><code>.github/workflows/ci.yml</code>, job <code>postgres</code></td></tr>
+    <tr><td>The quality suite can fail</td><td>A real defect is injected, detected, then repaired</td><td><code>test_the_suite_would_catch_a_real_defect</code></td></tr>
+    <tr><td>The generator is deterministic</td><td>Two runs with one seed compared byte for byte</td><td><code>test_generation_is_deterministic</code></td></tr>
+    <tr><td>The churn model does not leak the future</td><td>Feature snapshot asserted to predate the label window</td><td><code>test_churn_snapshot_is_taken_before_the_analysis_date</code></td></tr>
+    <tr><td>Attribution models redistribute, not create, revenue</td><td>All five model totals asserted equal</td><td><code>test_every_attribution_model_credits_the_same_total</code></td></tr>
+    <tr><td>Delivery is at-least-once</td><td>Offset asserted uncommitted until the write succeeds</td><td><code>test_consumer_commits_only_after_a_successful_write</code></td></tr>
+    <tr><td>Stream windows use event time</td><td>Six-hour-old events still counted in a 60-minute window</td><td><code>test_kpi_window_uses_event_time_not_wall_clock</code></td></tr>
+    <tr><td><code>ops.*</code> survives a refresh</td><td>Marker row asserted present after re-running init</td><td><code>test_ops_tables_survive_a_full_refresh</code></td></tr>
+    <tr><td>No chart uses a secondary axis</td><td>Dashboard sources scanned for the forbidden constructs</td><td><code>test_no_page_creates_a_secondary_y_axis</code></td></tr>
+    <tr><td>Power BI matches the dashboards</td><td>Theme palette compared to the Streamlit palette</td><td><code>test_powerbi_theme_uses_the_same_palette</code></td></tr>
+    <tr><td>Infrastructure is well-formed</td><td><code>terraform validate</code>, <code>actionlint</code>, backend-key uniqueness</td><td><code>.github/workflows/ci.yml</code>, job <code>terraform</code></td></tr>
+  </tbody>
+</table>
+<div class="note">
+  <span class="label">Current verification status</span>
+  223 automated tests pass against a warehouse built from real generated data.
+  64 of 64 data-quality checks pass. The Terraform configuration validates and
+  the workflows lint clean. No <code>terraform plan</code> has yet been executed
+  against a live Azure subscription — the configuration is proven well-formed,
+  not yet proven accepted by the Azure API.
+</div>
+
+</main>
+
+<script src="node_modules/mermaid/dist/mermaid.min.js"></script>
+<script src="diagrams-architecture.js"></script>
+<script src="uml-svg.js"></script>
+<script src="boot.js"></script>
+</body>
+</html>

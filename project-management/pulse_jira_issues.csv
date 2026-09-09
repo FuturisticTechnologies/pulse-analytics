@@ -1,0 +1,1212 @@
+Issue Type,Issue Key,Issue ID,Summary,Description,Epic Name,Epic Link,Status,Resolution,Priority,Assignee,Reporter,Story Points,Sprint,Components,Labels,Created,Updated,Resolved,Due Date,Comment,Comment,Comment,Comment,Comment
+Epic,PULSE-1,10001,Platform Foundations and Bronze Ingestion,"Land source data reliably before anything is modelled on top of it.
+
+Scope: repo and environment, the synthetic data generator we build against
+until prod access lands, the bronze landing zone, the CSV and API extracts,
+and the run context that records what ran.
+
+Out of scope: any transformation that changes a value. Bronze rejects nothing.",Foundations & Bronze,,Done,Done,Highest,devendranath.singam,geetha.nallamada,,Sprint 1 (02 Mar - 13 Mar),ETL;Platform,year1;foundation,2026-03-02 09:15:00,2026-04-02 16:59:00,2026-04-02 16:59:00,,"2026-03-02 09:40:00;geetha.nallamada;Framing for this epic: the only success criterion is that a row which existed in the source exists in bronze, unaltered. No filtering, no coercion, no helpful cleanup. Everything else is Silver's job.","2026-03-02 11:05:00;devendranath.singam;Agreed. I want ops.pipeline_runs in scope here too, otherwise we will be debugging loads by reading log files by hand in three weeks.","2026-04-02 16:58:00;devendranath.singam;Closing. Bronze lands 8 source files nightly, run context records rows in/out per stage, and PULSE-23 is why the loader now has an explicit dtype map.",,
+Epic,PULSE-2,10002,Silver Layer and Metric Definitions,"Repair the data once, in one place, and write down what every number means
+before anyone builds a chart on it.
+
+Scope: silver staging for customers, orders, payments, inventory, events and
+FX; docs/kpi-definitions.md as the contract; gold.analysis_window as the
+platform definition of ""today"".",Silver & Definitions,,Done,Done,Highest,geetha.nallamada,geetha.nallamada,,Sprint 2 (16 Mar - 27 Mar),ETL;Docs,year1;definitions,2026-03-02 09:16:00,2026-04-24 16:40:00,2026-04-24 16:40:00,,"2026-03-02 10:12:00;geetha.nallamada;Deliberate sequencing note for anyone reading this later: no dashboard ships out of this epic. If we build a dashboard on a metric nobody has agreed to, we lock in the disagreement and then spend two years defending it.",2026-03-18 14:30:00;divya.maram;Finance and marketing quoted three different revenue figures for February in the same meeting. That is the argument for this epic in one slide.,2026-04-24 16:39:00;geetha.nallamada;Done. Six weeks with no dashboard and a weekly CSV instead. Every metric argument since has been resolvable by pointing at kpi-definitions.md.,,
+Epic,PULSE-3,10003,Data Quality and Pipeline Observability,"Make it possible to answer ""is the number wrong, or is the pipeline wrong?""
+without reading SQL.
+
+Scope: the check framework, the first suite of checks, the reconciliation
+checks, and ops.data_quality_results as durable history.
+
+Out of scope for now: paging anyone. Results are recorded and reviewed on
+Monday until somebody actually depends on the warehouse.",Quality & Observability,,Done,Done,High,divya.maram,geetha.nallamada,,Sprint 4 (13 Apr - 24 Apr),Quality;ETL,year1;quality,2026-03-02 09:17:00,2026-05-08 16:10:00,2026-05-08 16:10:00,,2026-03-02 10:25:00;devendranath.singam;I want the alerting story explicitly deferred rather than silently dropped. Paging a rota that does not exist is theatre.,2026-04-15 09:50:00;geetha.nallamada;Deferred and written down as PULSE-120 so it stays visible in the backlog instead of becoming folklore.,"2026-05-08 16:09:00;divya.maram;Closed with 24 checks, 5 reconciliations and a history table. The threshold re-tune in PULSE-42 is the reason anyone still reads the output.",,
+Epic,PULSE-4,10004,Kimball Star Schema (Gold),"Stop answering every new question with bespoke SQL.
+
+Scope: conformed dimensions with surrogate keys and Unknown members, facts at
+their correct grains, indexes, and the SCD2-shaped customer history table.",Star Schema,,Done,Done,High,geetha.nallamada,geetha.nallamada,,Sprint 6 (11 May - 22 May),Warehouse,year1;modelling,2026-03-02 09:18:00,2026-06-05 16:58:00,2026-06-05 16:58:00,,"2026-05-11 09:30:00;geetha.nallamada;The shape we agreed: seven dimensions, five facts, surrogate keys everywhere, Unknown member on -1 so an unmatched fact row never silently disappears from an inner join.",2026-06-05 16:57:00;geetha.nallamada;Closing. 'Revenue by region by month for electronics' went from a day of bespoke SQL to about four minutes. That was the point.,,,
+Epic,PULSE-5,10005,Sales and Executive Reporting,"The first dashboards, and the design system they are built on.
+
+Scope: the Streamlit shell and data access layer, theme.py as the chart
+contract, the executive and sales pages, the sales marts behind them, and the
+Power BI export for stakeholders who live in Power BI.",Sales & Exec Reporting,,In Progress,,High,divya.maram,geetha.nallamada,,Sprint 7 (25 May - 05 Jun),Dashboards;Warehouse,year1;reporting,2026-03-02 09:19:00,2026-03-02 09:19:00,,,"2026-06-08 10:15:00;geetha.nallamada;theme.py lands before the first chart, not after the thirtieth. Retrofitting consistency across a built dashboard estate costs an order of magnitude more than starting with it.","2026-09-02 11:20:00;divya.maram;Remaining in this epic: the operations page (PULSE-105) and the Power BI export (PULSE-110, PULSE-111). Everything else has shipped.",,,
+Epic,PULSE-6,10006,Customer Analytics,"Move from what we sold to who keeps buying, who left, and what an acquired
+customer is worth.
+
+Scope: mart_customer_360, RFM segmentation, cohort retention, monthly churn,
+CLV curves and the customer dashboard page.",Customer Analytics,,Done,Done,High,geetha.nallamada,geetha.nallamada,,Sprint 10 (06 Jul - 17 Jul),Warehouse;Analytics;Dashboards,year1;customer,2026-03-02 09:20:00,2026-07-31 16:30:00,2026-07-31 16:30:00,,"2026-07-06 09:25:00;geetha.nallamada;Every metric in this epic is recency-based, so every one of them depends on PULSE-35. If analysis_window is wrong, all of this is wrong and it will look entirely plausible.",2026-07-31 16:29:00;geetha.nallamada;Closed. The cohort definition bug (PULSE-74) was worth the epic on its own - it turned a retention panic into an activation workstream.,,,
+Epic,PULSE-7,10007,Real-Time Streaming,"Payment failures are currently found the next morning. A gateway degradation
+on a Friday evening costs a full night of orders.
+
+Scope: the event bus abstraction with file and Kafka implementations, four
+correlated topics, a micro-batched consumer, the ops landing tables, the
+real-time KPI window and the real-time dashboard page.",Real-Time Streaming,,Done,Done,High,devendranath.singam,geetha.nallamada,,Sprint 11 (20 Jul - 31 Jul),Streaming;Platform,year2;streaming,2026-03-02 09:21:00,2026-08-14 16:59:00,2026-08-14 16:59:00,,"2026-07-20 09:40:00;devendranath.singam;Two rules for this epic. One: event time, never wall-clock time, or we can never replay a stream and get the same KPIs back. Two: the consumer owns no metric definitions - it lands events and recomputes a window, and every metric stays in SQL next to the batch ones.",2026-07-20 10:05:00;geetha.nallamada;Seconding rule two hard. Revenue must not mean two different things depending on which pipeline produced it.,2026-08-14 16:58:00;devendranath.singam;Closed. PULSE-85 was the ugly one and it is why ops.* is now CREATE TABLE IF NOT EXISTS with a test behind it.,,
+Epic,PULSE-8,10008,Marketing Analytics and Attribution,"Marketing reports a blended ROAS of 4.2 and nobody can say what it is
+attributed on. The number is being used to set budget.
+
+Scope: campaign, channel and acquisition marts; five attribution models
+published side by side; LTV:CAC by acquisition channel; the marketing
+dashboard page, with every approximate number labelled as approximate.",Marketing & Attribution,,Done,Done,High,geetha.nallamada,geetha.nallamada,,Sprint 13 (17 Aug - 28 Aug),Warehouse;Analytics;Dashboards,year2;marketing,2026-03-02 09:22:00,2026-08-28 16:57:00,2026-08-28 16:57:00,,2026-08-03 10:30:00;geetha.nallamada;We are not picking an attribution model. We publish five and let the spread between them be the finding. Any single number here would be a confident answer to a question we cannot actually answer.,2026-08-28 16:56:00;geetha.nallamada;Closed. An influencer channel with a large upper_funnel_bias was being starved by a last-touch budget. A single ROAS figure would have hidden that completely.,,,
+Epic,PULSE-9,10009,Predictive Analytics,"Everything is retrospective. Purchasing over-orders on gut feel and retention
+finds out about churn after it has happened.
+
+Scope: demand forecasting with honest baselines, churn propensity scoring,
+inventory optimisation, and product affinity.
+
+Constraint agreed up front: the output has to survive contact with someone who
+then has to do something about it. Explainability beats a marginally better
+score.",Predictive Analytics,,In Progress,,High,geetha.nallamada,geetha.nallamada,,Sprint 14 (31 Aug - 11 Sep),Analytics,year2;ml,2026-03-02 09:23:00,2026-03-02 09:23:00,,,"2026-08-31 09:35:00;geetha.nallamada;Backtest everything against a seasonal naive baseline and publish the baseline as a first-class result. If next-week-looks-like-last-week wins, we need to know that before we deploy a model that adds nothing.",2026-09-07 15:40:00;divya.maram;Forecasting has shipped. Churn is in review after the leakage fix. Inventory and basket are the remaining two.,,,
+Epic,PULSE-10,10010,"Platform Engineering, CI/CD and Cloud","Everything runs on three laptops. There is no shared always-on environment and
+no answer to ""what happens when one of us is away"".
+
+Scope: local parity with docker-compose, CI on every push, Terraform for the
+Azure footprint, deployment workflows, and the operational scripts.",Platform & CI/CD,,In Progress,,High,devendranath.singam,geetha.nallamada,,Sprint 1 (02 Mar - 13 Mar),Platform;CI,devops;infrastructure,2026-03-02 09:24:00,2026-03-02 09:24:00,,,2026-03-02 11:30:00;devendranath.singam;This epic runs the whole length of the project rather than as a phase at the end. A deployment story started in month seven is a deployment story that discovers the code cannot be deployed.,"2026-09-04 16:15:00;devendranath.singam;Terraform apply is green in dev. Deployment workflows and the ops scripts are the last two blocks, planned for Sprint 15.",,,
+Epic,PULSE-11,10011,Quality Engineering and Release Assurance,"Test the platform the way it will actually fail: on real generated data, with
+the same SQL, end to end.
+
+Scope: the pytest warehouse fixture, per-layer regression packs, dashboard
+smoke tests, CI gating and the UAT process.
+
+Staffed from 15 Jun 2026 when the QA analyst joins; until then the developers
+own their own tests.",Quality Engineering,,In Progress,,Medium,divya.maram,geetha.nallamada,,Sprint 5 (27 Apr - 08 May),Quality;CI,qa;testing,2026-03-02 09:25:00,2026-03-02 09:25:00,,,"2026-03-02 11:45:00;geetha.nallamada;No mocks. A mocked warehouse tests our assumptions about SQL, which is exactly the thing that keeps being wrong. Tests build a real warehouse from generated data.","2026-06-16 10:20:00;neha.chauhan;Picking this epic up. First thing I want is a written regression scope per layer, so that covered means something other than a count of tests.",2026-09-07 16:05:00;neha.chauhan;Bronze through gold and the dashboards have regression packs. The analytics pack (PULSE-106) is in progress; UAT (PULSE-115) is next sprint.,,
+Story,PULSE-12,10012,Repository scaffold and local development environment,"As an engineer on the team
+I want a repository that clones and runs the same way on every machine
+So that day one is not spent reconciling three different local setups.
+
+Acceptance criteria
+* src layout agreed and created: etl/, database/, analytics/, dashboards/,
+  streaming/, tests/, docs/, scripts/, data-generator/
+* .gitignore excludes data/, .venv/, *.duckdb and any .pbix
+* .env.example documents every variable the code reads, with no real secrets
+* README quickstart takes a clean clone to a built warehouse",,PULSE-10,Done,Done,Medium,devendranath.singam,geetha.nallamada,3,Sprint 1 (02 Mar - 13 Mar),Platform,setup,2026-03-02 13:40:00,2026-03-05 11:05:00,2026-03-05 11:05:00,,"2026-03-03 10:15:00;devendranath.singam;Layout pushed. One thing I want to fix now rather than later: data/ is gitignored in full. Generated warehouses are large, they change on every run, and a committed .duckdb is a merge conflict nobody can resolve.","2026-03-03 15:22:00;divya.maram;Cloned clean on my machine and the quickstart worked apart from the DuckDB extension download, which needs network on first run. Added a line to the README rather than vendoring it.","2026-03-05 11:04:00;geetha.nallamada;Approved. .env.example carrying every variable with placeholder values is the bit that will save us later - a missing env var should fail at startup with a name, not at 2am with a KeyError.",,
+Task,PULSE-13,10013,Pin the Python baseline and dependency set,"Pin Python 3.12 and produce a requirements.txt with exact versions.
+
+Acceptance criteria
+* requirements.txt pinned to exact versions, not ranges
+* documented reason for each non-obvious dependency
+* fresh venv install verified on Windows and Linux",,PULSE-10,Done,Done,Medium,devendranath.singam,geetha.nallamada,2,Sprint 1 (02 Mar - 13 Mar),Platform,setup,2026-03-02 13:45:00,2026-03-04 16:30:00,2026-03-04 16:30:00,,2026-03-04 09:10:00;devendranath.singam;Pinned exact versions. Ranges are how a green build on Monday becomes a red build on Tuesday with no commits in between.,"2026-03-04 16:28:00;divya.maram;Verified on Windows. Worth noting for anyone hitting it: DuckDB is the local engine, Postgres is the deployment target, and the SQL is written to run on both. We should keep that constraint written down somewhere more permanent than this comment.",,,
+Story,PULSE-14,10014,Synthetic data generator so we can build without prod access,"As the data team
+I want a generator that produces a realistic, correlated retail dataset
+So that we can build and test the whole pipeline before prod access is granted.
+
+Prod access is with the security review and nobody will commit to a date.
+Waiting for it costs the entire first quarter.
+
+Acceptance criteria
+* customers, products, orders, order lines, payments, inventory, campaigns,
+  clickstream and FX rates, mutually consistent
+* seeded and reproducible - the same seed produces the same dataset
+* size presets from a small demo set to a multi-million row set
+* referential integrity holds across every generated file",,PULSE-1,Done,Done,Medium,divya.maram,geetha.nallamada,8,Sprint 1 (02 Mar - 13 Mar),ETL,generator;foundation,2026-03-02 14:05:00,2026-03-12 15:40:00,2026-03-12 15:40:00,,"2026-03-02 14:30:00;geetha.nallamada;Correlation is the part that matters. Uncorrelated random data will make every check pass and every model useless - seasonality, weekday effects, a loyalty tier that actually predicts order value, campaigns that actually move volume.","2026-03-06 11:50:00;divya.maram;First pass generating. Added a weekly cycle, a Q4 lift and a payday spike, plus a small share of returns and cancellations so the status flags are not all completed.","2026-03-10 09:35:00;devendranath.singam;Ran the largest preset overnight. 4.2m order lines in about nine minutes, and it is deterministic across two machines with the same seed. Good enough for load testing.","2026-03-12 15:38:00;geetha.nallamada;Accepted. Reproducibility from a seed is doing more work here than it looks - it means a failing test is a failing test everywhere, not just on the machine that generated the data.",
+Task,PULSE-15,10015,Seed known defects into the generator,"The generator must produce dirty data on purpose, so the quality layer has
+something real to catch and we can assert it catches it.
+
+Defects to inject, at configurable rates
+* replayed orders - the same order_id landed twice with different ingest times
+* negative quantities on a small share of lines
+* loyalty tier case and whitespace drift: ""Gold"", ""gold "", ""GOLD""
+* about 0.07% of customers with no email address
+* a handful of orders referencing a customer_id that does not exist
+* FX gaps on weekend dates",,PULSE-1,Done,Done,Medium,divya.maram,geetha.nallamada,3,Sprint 1 (02 Mar - 13 Mar),ETL,generator;quality,2026-03-02 14:10:00,2026-03-13 12:10:00,2026-03-13 12:10:00,,"2026-03-11 10:20:00;divya.maram;Injecting the defects with a documented rate per defect, so a test can assert both that we caught them and how many there should be.",2026-03-13 12:08:00;geetha.nallamada;This is the ticket that makes the quality epic testable rather than aspirational. The missing-email rate in particular should stay at 0.07% - it is modelled on what the source system actually looks like.,,,
+Story,PULSE-16,10016,Bronze schemas and landing tables,"As the platform
+I want a bronze schema whose tables mirror the source files exactly
+So that a landed row can always be compared with what the source sent.
+
+Acceptance criteria
+* database/init/001_schemas.sql creates bronze, silver, gold and ops
+* database/init/002_bronze_tables.sql mirrors each source file
+* all bronze columns land as text, plus ingest metadata: source file,
+  ingested_at, run_id, source row number
+* no constraints, no keys, no not-null on bronze",,PULSE-1,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 1 (02 Mar - 13 Mar),ETL;Warehouse,bronze,2026-03-03 09:20:00,2026-03-12 16:59:00,2026-03-12 16:59:00,,"2026-03-03 11:40:00;devendranath.singam;Landing everything as text is deliberate. A type cast at the bronze boundary is a silent filter - a value that will not cast becomes a null or an exception, and either way the original is gone.","2026-03-09 14:05:00;divya.maram;Source row number added. When a check fails, being able to point at 'row 41,209 of orders_2026-03-08.csv' rather than 'some row somewhere' is the difference between a five minute fix and an afternoon.","2026-03-12 16:58:00;geetha.nallamada;Approved. Four schemas, clear ownership per layer, and the metadata columns on every bronze table.",,
+Story,PULSE-17,10017,Nightly CSV extract from the OLTP database,"As the platform
+I want a nightly extract of the OLTP tables into the bronze landing zone
+So that there is one authoritative copy of source data each day.
+
+Acceptance criteria
+* etl/extract/csv_source.py reads a configured set of source files
+* files land under data/raw partitioned by extract date
+* an extract that finds no file fails loudly instead of loading nothing quietly
+* checksum and row count recorded per file in the run context",,PULSE-1,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 1 (02 Mar - 13 Mar),ETL,bronze;extract,2026-03-03 09:25:00,2026-03-13 16:50:00,2026-03-13 16:50:00,,2026-03-10 15:30:00;devendranath.singam;The empty-source case is the one worth being careful about. A silent zero-row extract looks identical to a quiet business day until someone asks why last Tuesday is missing.,"2026-03-13 16:48:00;geetha.nallamada;Agreed and accepted. Missing file is an error, zero rows in a present file is a warning with the count recorded.",,,
+Task,PULSE-18,10018,ADR-001: Bronze rejects nothing,"Record the decision and the reasoning, because this one will be questioned
+again by whoever joins next.
+
+Decision: the bronze layer lands every row it is given. Invalid, duplicated
+and malformed rows are landed and counted, never filtered.
+
+Rationale: a filter nobody remembers writing is how data disappears. If bad
+rows are dropped at load, the only evidence they existed is in a log that
+rotates. Landing them and counting them in the quality layer means the
+question ""how much of this is broken?"" has a number.
+
+Cost accepted: bronze is larger than it needs to be, and every downstream
+layer has to be explicit about what it excludes.",,PULSE-1,Done,Done,Medium,geetha.nallamada,geetha.nallamada,1,Sprint 1 (02 Mar - 13 Mar),Docs,adr;decision,2026-03-04 10:00:00,2026-03-06 14:20:00,2026-03-06 14:20:00,,"2026-03-04 10:45:00;devendranath.singam;My first instinct was to filter at load, and I want that recorded in the ADR rather than quietly overwritten. It looks like tidiness right up to the first time someone asks where a row went.",2026-03-06 14:18:00;geetha.nallamada;Written up with your instinct included as the rejected alternative. An ADR that only records the winning argument is half an ADR.,,,
+Story,PULSE-19,10019,Metric definition workshop and the KPI contract skeleton,"As the business
+I want one written definition per metric, agreed before implementation
+So that two teams cannot quote two different revenue figures.
+
+Acceptance criteria
+* docs/kpi-definitions.md created with the contract statement at the top:
+  if two people could disagree about what a number means, it is defined here
+  and nothing computes its own version
+* workshop held with finance, sales and marketing; disagreements recorded
+  rather than smoothed over
+* every definition carries: the rule, what it excludes, where it is
+  implemented, and the judgement call it contains",,PULSE-2,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 1 (02 Mar - 13 Mar),Docs,definitions;stakeholder,2026-03-03 10:30:00,2026-03-13 15:00:00,2026-03-13 15:00:00,,"2026-03-05 16:20:00;geetha.nallamada;Workshop done and it was worse than expected, which is good. Finance excludes shipping from revenue, marketing includes it, and the board deck has been built from the marketing figure for the last two quarters.",2026-03-06 09:15:00;divya.maram;That single difference is about 6% on the monthly number. Nobody had noticed because the two figures were never on the same page.,2026-03-11 11:40:00;devendranath.singam;Asking the awkward question early: are we going to be the team that tells the board the last two decks were 6% high?,"2026-03-11 12:05:00;geetha.nallamada;Yes, but framed as 'here is the definition we are standardising on and here is the restated series', not as an accusation. The restatement is a one-off cost. Two live definitions is a permanent one.","2026-03-13 14:58:00;geetha.nallamada;Skeleton committed with revenue, gross profit, margin and AOV stubs. Detail lands in PULSE-24 and PULSE-25."
+Story,PULSE-20,10020,"Bronze loader - land everything, count everything","As the platform
+I want a loader that writes every extracted row into bronze
+So that ingestion never makes a judgement about data quality.
+
+Acceptance criteria
+* etl/load/load_bronze.py loads all configured sources in one run
+* row counts in and out recorded per source, and they must match
+* loads are idempotent per run_id - a re-run replaces its own rows only
+* explicit dtype handling: everything lands as text",,PULSE-1,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 2 (16 Mar - 27 Mar),ETL,bronze;load,2026-03-16 09:30:00,2026-03-25 16:20:00,2026-03-25 16:20:00,,"2026-03-18 11:10:00;devendranath.singam;Rows in must equal rows out is now an assertion in the loader, not a check downstream. If the loader loses a row, I want it to fail there rather than have the quality suite discover it two stages later.","2026-03-25 16:18:00;divya.maram;Verified against the largest preset. Counts match on all eight sources, and re-running the same run_id is clean.",,,
+Story,PULSE-21,10021,API extract for FX rates and campaign spend,"As the platform
+I want FX rates and campaign spend pulled from their APIs into bronze
+So that multi-currency revenue and marketing cost are available to the model.
+
+Acceptance criteria
+* etl/extract/api_source.py with retry, exponential backoff and a request cap
+* responses landed raw as JSON alongside the parsed rows
+* a rate-limited or failed call fails the run with the endpoint named
+* no credentials in code - everything from the environment",,PULSE-1,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 2 (16 Mar - 27 Mar),ETL,extract;api,2026-03-16 09:35:00,2026-03-27 15:10:00,2026-03-27 15:10:00,,2026-03-20 14:25:00;devendranath.singam;Landing the raw JSON as well as the parsed rows. When the provider changes a field name - and they will - the raw payload is the only way to prove what we were sent.,"2026-03-24 10:05:00;divya.maram;FX has no weekend rates. Not a bug in the extract, but it will matter in silver, so I have raised it there rather than papering over it here.",2026-03-27 15:08:00;geetha.nallamada;Accepted. Weekend FX handling is PULSE-34's problem and is written into that ticket.,,
+Story,PULSE-22,10022,Run context and ops.pipeline_runs,"As an engineer
+I want every pipeline run recorded with its stages, timings and row counts
+So that ""what happened last night"" is a query, not an archaeology exercise.
+
+Acceptance criteria
+* database/init/003_ops_tables.sql creates ops.pipeline_runs
+* etl/run_context.py issues a run_id and records stage start, end, status,
+  rows in, rows out and the error if there is one
+* a failed stage still writes its row
+* the run_id is stamped onto every bronze row loaded in that run",,PULSE-3,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 2 (16 Mar - 27 Mar),ETL;Platform,observability,2026-03-16 09:40:00,2026-03-26 16:59:00,2026-03-26 16:59:00,,2026-03-19 09:50:00;devendranath.singam;A failed stage writing its row is the requirement people forget. A run table that only records successes tells you nothing on the morning you actually need it.,2026-03-26 16:58:00;geetha.nallamada;Approved. Also worth noting for the future: these stage boundaries are the seam a real orchestrator will wrap later. Keeping them clean now means Dagster is a wrapper rather than a rewrite.,,,
+Bug,PULSE-23,10023,Bronze load strips leading zeros from order_id,"Observed: order ids in the source such as 0004821 land in bronze as 4821.
+
+Impact: joins between orders and order lines silently drop the affected rows.
+About 1.2% of orders in the demo dataset, all of them older records from before
+the source system widened its id format.
+
+Cause: the CSV reader was inferring dtypes, so a numeric-looking id column
+became an integer.
+
+Fix: explicit dtype mapping in the extract - every bronze column is read and
+landed as text, per ADR-001.
+
+Found by: reconciliation between the source row count and joined line count.",,PULSE-1,Done,Done,High,devendranath.singam,divya.maram,3,Sprint 2 (16 Mar - 27 Mar),ETL,bronze;data-loss,2026-03-19 11:05:00,2026-03-23 14:40:00,2026-03-23 14:40:00,,2026-03-19 11:20:00;divya.maram;Found this because the order line count did not match the header count and the gap was suspiciously stable at about 1.2%. All the missing ids turn out to start with a zero.,"2026-03-19 11:48:00;devendranath.singam;Confirmed. The reader was inferring dtypes. This is exactly the failure ADR-001 predicted - nothing errored, nothing was logged, the rows just quietly stopped matching.",2026-03-20 09:30:00;geetha.nallamada;Raising the priority. Silent data loss beats loud failure on the list of things I do not want in this platform. Please add a check that asserts header-to-line join completeness so this class of thing cannot come back unnoticed.,"2026-03-23 14:38:00;devendranath.singam;Fixed with an explicit dtype map, and the join completeness check is in as one of the reconciliation checks in PULSE-40.",
+Story,PULSE-24,10024,"Define revenue, gross profit and gross margin","As the business
+I want one written, implemented-once definition of revenue and margin
+So that finance, marketing and the board deck agree.
+
+Agreed definitions
+* Revenue: net amount of completed orders - gross minus discounts, excluding
+  shipping and tax. Cancelled, returned and pending orders stay in the fact
+  table, flagged, because operations needs to see them.
+* Gross profit: net_amount - cost_amount. Product cost only; no fulfilment,
+  marketing or overhead allocation, because the source does not carry them and
+  an invented allocation is a fabricated number presented as a measured one.
+* Gross margin %: gross_profit / revenue, on net revenue rather than gross,
+  because a gross denominator flatters the margin by the size of the discount.",,PULSE-2,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 2 (16 Mar - 27 Mar),Docs;Warehouse,definitions;kpi,2026-03-16 10:15:00,2026-03-27 16:00:00,2026-03-27 16:00:00,,"2026-03-17 15:30:00;geetha.nallamada;Finance has signed off on excluding shipping and tax. Their argument, which I am recording because it is the right one: they are pass-throughs, not earnings, and including them makes revenue move when the courier changes their pricing.",2026-03-23 10:20:00;divya.maram;Implemented as a single is_revenue flag in silver rather than a status filter repeated in every mart. Twelve copies of a status list is twelve chances to get it wrong.,"2026-03-27 15:55:00;geetha.nallamada;Signed off. Restatement of the last two quarters goes to the board as a note with the definition attached, not as a correction buried in a footnote.",,
+Task,PULSE-25,10025,Define AOV and record the order-grain trap,"Define average order value, and write down the trap that comes with it.
+
+Definition: AOV = revenue / distinct completed orders. It is a header-grain
+metric and must never be computed by averaging line-grain rows.
+
+Written into the KPI document with the reason, because the mistake is
+invisible in the output - a wrong AOV looks like a plausible AOV.",,PULSE-2,Done,Done,Medium,geetha.nallamada,geetha.nallamada,2,Sprint 2 (16 Mar - 27 Mar),Docs,definitions;kpi,2026-03-16 10:20:00,2026-03-24 11:30:00,2026-03-24 11:30:00,,"2026-03-18 09:40:00;geetha.nallamada;Writing this down now, before the facts exist, because there is no error message for averaging the wrong grain. You just get a number that is confidently wrong and nobody can tell by looking.",2026-03-24 11:28:00;divya.maram;Documented. I suspect we will still hit it once anyway.,,,
+Task,PULSE-26,10026,docker-compose with Postgres for local parity,"Stand up Postgres in docker-compose so the deployment target can be exercised
+locally, alongside the DuckDB path used for fast local iteration.
+
+Acceptance criteria
+* docker-compose up gives a working Postgres with the schemas created
+* the same DDL runs on both engines, or the difference is documented
+* a documented one-command teardown that does not leave volumes behind",,PULSE-10,Done,Done,Medium,devendranath.singam,geetha.nallamada,3,Sprint 2 (16 Mar - 27 Mar),Platform,docker;local-parity,2026-03-17 14:20:00,2026-03-27 12:15:00,2026-03-27 12:15:00,,"2026-03-24 16:10:00;devendranath.singam;Running against both engines locally from here on. The gap we do not want is SQL that works in DuckDB, ships, and then meets Postgres for the first time in the cloud.",2026-03-27 12:12:00;divya.maram;Found two divergences already - a date_trunc argument order difference and one window frame default. Both documented in the DDL rather than branched on.,,,
+Story,PULSE-27,10027,Silver reference data and customer staging,"As the model
+I want customers and reference data cleaned once, in silver
+So that no downstream query repeats a cleanup rule.
+
+Acceptance criteria
+* database/staging/010_silver_reference.sql and 011_silver_customers.sql
+* loyalty tier canonicalised - trimmed, title-cased, mapped to a known set,
+  anything unmapped landing as Unknown rather than being dropped
+* email normalised to lower case and trimmed; missing email stays missing and
+  is not defaulted to an empty string
+* typed columns with the cast rules documented in the file header",,PULSE-2,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 3 (30 Mar - 10 Apr),ETL,silver,2026-03-30 09:20:00,2026-04-08 16:40:00,2026-04-08 16:40:00,,"2026-03-31 14:15:00;divya.maram;Nine distinct spellings of four loyalty tiers in the generated data, which is modelled on what the source actually contains. Canonicalising to the known set and landing anything else as Unknown.","2026-04-02 10:30:00;geetha.nallamada;Unknown rather than null, and definitely rather than dropped. A tier we do not recognise is a fact about the source system that somebody should eventually look at.","2026-04-08 16:38:00;geetha.nallamada;Accepted. Missing email staying genuinely missing matters for PULSE-41 - if we default it to an empty string, the completeness check becomes untrue rather than merely noisy.",,
+Story,PULSE-28,10028,Silver orders - de-duplicate replayed orders,"As the model
+I want replayed orders collapsed to one row each
+So that revenue is not double counted.
+
+The source replays orders on retry, landing the same order_id more than once
+with different ingest timestamps and sometimes a changed status.
+
+Acceptance criteria
+* database/staging/012_silver_orders.sql de-duplicates on order_id
+* the surviving row is the latest by source updated_at, not the first seen
+* negative quantities corrected per the documented rule, with the original
+  value retained in a separate column
+* de-duplication counts written to the run context",,PULSE-2,Done,Done,Medium,divya.maram,geetha.nallamada,8,Sprint 3 (30 Mar - 10 Apr),ETL,silver;dedupe,2026-03-30 09:25:00,2026-04-09 16:59:00,2026-04-09 16:59:00,,2026-04-01 11:20:00;divya.maram;Roughly 0.9% of orders arrive more than once. Collapsing on order_id with a window function over ingest time.,2026-04-06 15:45:00;geetha.nallamada;Careful with the survivor rule - see PULSE-29. Ingest order and business order are not the same thing and the difference is a status field.,"2026-04-09 16:58:00;divya.maram;Reworked to latest source updated_at with ingest time as a tiebreak, and the original negative quantity is kept in quantity_raw so the correction is auditable rather than invisible.",,
+Bug,PULSE-29,10029,De-duplication keeps the earliest row and loses status changes,"Observed: an order replayed as pending and then completed collapses to the
+pending row, so its revenue is excluded.
+
+Impact: about 0.3% of completed orders missing from revenue. Small in
+percentage terms, systematically biased downwards, and invisible without
+comparing against the source.
+
+Cause: the de-duplication window was ordered by first ingest time, on the
+assumption that the first landing is authoritative. It is not - the source
+replays because something changed.
+
+Fix: order by source updated_at descending, with ingest time as a tiebreak.
+Add a reconciliation check comparing completed order counts against bronze.",,PULSE-2,Done,Done,High,divya.maram,geetha.nallamada,3,Sprint 3 (30 Mar - 10 Apr),ETL,silver;dedupe;revenue,2026-04-06 15:50:00,2026-04-09 12:20:00,2026-04-09 12:20:00,,"2026-04-06 15:55:00;geetha.nallamada;Caught this reading the SQL rather than from a failing test, which is the uncomfortable part. Reviewing the merge is not a substitute for a check that would have caught it.",2026-04-07 09:40:00;divya.maram;Confirmed and reproduced. 0.3% of completed orders were being dropped to pending. Fixing the window and adding the count comparison as a check so a review is not the only thing standing between us and this.,"2026-04-09 12:18:00;geetha.nallamada;Verified against bronze. Counts reconcile. This one goes in the retro - two of our first three data bugs have been silent, and both were caught by comparing counts across layers.",,
+Story,PULSE-30,10030,Silver payments,"As the model
+I want payment attempts staged with a clear success definition
+So that payment success rate is unambiguous.
+
+Acceptance criteria
+* database/staging/013_silver_payments.sql
+* attempts and outcomes kept distinct - a retried payment is two attempts and
+  one success, not one of each
+* two success rates defined and both published: per attempt and per order
+* gateway and method canonicalised",,PULSE-2,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 3 (30 Mar - 10 Apr),ETL,silver;payments,2026-03-30 09:30:00,2026-04-10 15:30:00,2026-04-10 15:30:00,,2026-04-03 10:10:00;divya.maram;Publishing two success rates rather than one. Per attempt is what the gateway conversation needs; per order is what the business cares about. One ambiguous number would get quoted in both conversations and be wrong in one of them.,"2026-04-10 15:28:00;geetha.nallamada;Agreed, and both go into the KPI document with their denominators spelled out.",,,
+Task,PULSE-31,10031,Pipeline orchestration skeleton,"Wire the stages into one runnable pipeline: extract, load bronze, build
+silver, build gold, build marts, run quality.
+
+Acceptance criteria
+* etl/pipeline.py runs the full sequence with one command
+* each stage opens and closes its own run-context record
+* a stage failure stops the run and leaves the warehouse in its last good
+  state rather than half rebuilt
+* stage boundaries are clean enough to be wrapped by a real orchestrator later",,PULSE-1,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 3 (30 Mar - 10 Apr),ETL;Platform,pipeline,2026-03-31 09:15:00,2026-04-09 16:10:00,2026-04-09 16:10:00,,"2026-03-31 09:40:00;devendranath.singam;Explicitly not adding an orchestrator. Six stages and one schedule do not need Dagster, and adding it now buys complexity we cannot yet justify. The stage boundaries are shaped so it becomes a wrapper when we do need it.","2026-04-09 16:08:00;geetha.nallamada;Accepted, and I have raised PULSE-117 in the backlog so 'we should have an orchestrator' is a ticket with a trigger condition rather than a recurring conversation.",,,
+Story,PULSE-32,10032,GitHub Actions CI on every push,"As the team
+I want the full pipeline to run on every push
+So that a change that breaks the build is caught by the machine, not by the
+next person to pull.
+
+Acceptance criteria
+* .github/workflows/ci.yml runs lint, tests and a full pipeline build on a
+  generated dataset
+* runs against both DuckDB and the containerised Postgres
+* under ten minutes on the demo preset
+* red build blocks merge",,PULSE-10,Done,Done,Medium,devendranath.singam,geetha.nallamada,8,Sprint 3 (30 Mar - 10 Apr),CI;Platform,ci,2026-03-31 09:20:00,2026-04-10 16:57:00,2026-04-10 16:57:00,,2026-04-07 14:30:00;devendranath.singam;Building a real warehouse from generated data in CI rather than mocking it. It costs about four minutes a run and it is the only way the SQL is actually exercised.,"2026-04-10 16:55:00;divya.maram;Green on both engines. Caught a Postgres-only cast error on the first run, which is precisely the class of thing this is for.",2026-04-10 16:56:00;geetha.nallamada;Approved. The quality suite joins this pipeline in PULSE-44 once it exists.,,
+Story,PULSE-33,10033,Silver inventory and clickstream events,"As the model
+I want inventory snapshots and clickstream events staged
+So that stock health and funnel analysis have a clean source.
+
+Acceptance criteria
+* database/staging/014_silver_inventory.sql and 015_silver_events.sql
+* inventory snapshots deduplicated to one row per product, location, date
+* event types canonicalised against a known list; unknown types kept and
+  counted, not dropped
+* session stitching rules documented in the file header",,PULSE-2,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 4 (13 Apr - 24 Apr),ETL,silver,2026-04-13 09:20:00,2026-04-22 16:00:00,2026-04-22 16:00:00,,"2026-04-16 11:25:00;divya.maram;Session stitching is a judgement call - 30 minute inactivity timeout, and a session does not cross a day boundary. Written into the file header so the next person does not have to reverse engineer it from the SQL.","2026-04-22 15:58:00;geetha.nallamada;Good. Any rule with a number in it that someone chose should be findable by reading, not by tracing.",,,
+Story,PULSE-34,10034,Silver FX and multi-currency normalisation,"As the business
+I want revenue in both local and reporting currency
+So that regional performance is comparable without hiding the local reality.
+
+Acceptance criteria
+* database/staging/016_silver_fx.sql
+* weekend and holiday gaps filled by carrying the last known rate forward,
+  with the fill flagged rather than silent
+* orders converted at the rate on the order date, not today's rate
+* local currency amounts retained alongside the converted values",,PULSE-2,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 4 (13 Apr - 24 Apr),ETL,silver;fx,2026-04-13 09:25:00,2026-04-23 15:40:00,2026-04-23 15:40:00,,"2026-04-15 10:50:00;geetha.nallamada;Converting at the order-date rate rather than the current rate. Restating history every time the currency moves makes last month's report disagree with itself, and no explanation of why is ever satisfying.","2026-04-20 14:05:00;divya.maram;Carry-forward fills are flagged in a rate_is_carried column so a check can count them. About 28% of dates are carried, which is just what weekends are.","2026-04-23 15:38:00;geetha.nallamada;Accepted, and the local currency columns stay. A regional manager should be able to see their own number in their own currency.",,
+Story,PULSE-35,10035,"gold.analysis_window - anchor ""today"" to the data","As the platform
+I want one table that defines what ""today"" means for every recency metric
+So that the same dataset produces the same segments in six months.
+
+Acceptance criteria
+* database/analytics/030_analysis_window.sql exposes as_of_date, set to
+  MAX(order_date) present in the data
+* every recency-based metric reads it; no query calls CURRENT_DATE directly
+* a test asserts no analytics SQL references CURRENT_DATE
+* switching to a live feed is one change: point as_of_date at CURRENT_DATE
+
+This is small and it is load-bearing. RFM, churn, cohorts and every ""last 30
+days"" tile all depend on it.",,PULSE-2,Done,Done,High,geetha.nallamada,geetha.nallamada,5,Sprint 4 (13 Apr - 24 Apr),Warehouse,reproducibility;kpi,2026-04-13 09:30:00,2026-04-24 14:30:00,2026-04-24 14:30:00,,"2026-04-14 09:35:00;geetha.nallamada;This is one table and about eleven lines of SQL, and I think it will end up being the single highest-leverage thing in the warehouse. A screenshot from April should still match the warehouse in September.","2026-04-17 11:20:00;devendranath.singam;The test that greps the analytics SQL for CURRENT_DATE is the part that makes it stick. A convention without an assertion is a suggestion, and someone will write CURRENT_DATE at 6pm on a Friday.",2026-04-24 14:28:00;divya.maram;Merged with the test. It already caught one usage in a draft mart I had open.,,
+Task,PULSE-36,10036,ADR-002: Reproducibility anchor,"Decision: all recency-based metrics anchor to gold.analysis_window.as_of_date,
+derived from the data, never from the wall clock.
+
+Rationale: a report, a test and a screenshot must agree. Wall-clock anchoring
+means a cohort chart moves every time it is opened, which destroys trust in it
+faster than being wrong would.
+
+Cost accepted: ""today"" in the platform is the latest date in the data, which
+is not today. Every dashboard states the as-of date on the page.",,PULSE-2,Done,Done,Medium,geetha.nallamada,geetha.nallamada,1,Sprint 4 (13 Apr - 24 Apr),Docs,adr;decision;reproducibility,2026-04-14 10:00:00,2026-04-17 12:00:00,2026-04-17 12:00:00,,"2026-04-17 11:58:00;geetha.nallamada;Written up. The visible as-of date on every dashboard is part of the decision, not decoration - if the platform's today is not the calendar's today, the page has to say so.",,,,
+Story,PULSE-37,10037,Data quality check framework,"As the team
+I want a check framework where a new check is a small declaration
+So that adding a check is cheap enough that we actually add them.
+
+Acceptance criteria
+* etl/quality/checks.py provides completeness, uniqueness, range, referential
+  integrity, freshness and reconciliation check types
+* every check declares: name, layer, severity, threshold and a description of
+  what a failure means in business terms
+* etl/quality/suite.py runs the suite and returns a structured result
+* a check failing does not stop the suite",,PULSE-3,Done,Done,Medium,divya.maram,geetha.nallamada,8,Sprint 4 (13 Apr - 24 Apr),Quality,quality;framework,2026-04-14 09:15:00,2026-04-24 16:20:00,2026-04-24 16:20:00,,2026-04-16 10:40:00;divya.maram;Every check carries a plain-language description of what a failure means. A check called chk_cust_email_not_null tells the person reading the alert nothing about whether to care.,2026-04-21 15:15:00;geetha.nallamada;Severity as a first-class field rather than a convention. The difference between 'stop the pipeline' and 'note it for Monday' is a business decision and it should be visible in the declaration.,2026-04-24 16:18:00;geetha.nallamada;Accepted. Continuing past a failure matters - one broken check should not hide the other twenty-three results.,,
+Story,PULSE-38,10038,ops.data_quality_results history table,"As the team
+I want every check result stored with its run
+So that we can see a trend rather than tonight's snapshot.
+
+Acceptance criteria
+* ops.data_quality_results records run_id, check name, layer, severity,
+  observed value, threshold, pass/fail/warn and timestamp
+* results are appended, never overwritten
+* the table survives a full warehouse rebuild",,PULSE-3,Done,Done,Medium,devendranath.singam,geetha.nallamada,3,Sprint 4 (13 Apr - 24 Apr),Quality;Platform,quality;observability,2026-04-14 09:20:00,2026-04-23 11:40:00,2026-04-23 11:40:00,,"2026-04-20 09:25:00;devendranath.singam;History rather than latest-state. A check that has been drifting for three weeks is a different problem from one that broke last night, and you cannot tell them apart from a snapshot.",2026-04-23 11:35:00;geetha.nallamada;Accepted. This history is also the foundation the drift work will eventually sit on - PULSE-121.,,,
+Story,PULSE-39,10039,First suite of completeness and validity checks,"As the team
+I want roughly twenty checks covering the bronze and silver layers
+So that a broken load is visible without reading SQL.
+
+Coverage
+* bronze row counts against extract counts, per source
+* not-null on business keys
+* uniqueness on order_id, customer_id, product_id in silver
+* referential integrity from orders to customers and products
+* ranges on quantity, unit price, discount
+* freshness of the latest order date against the extract date
+* accepted-value checks on status, tier, channel, payment method",,PULSE-3,Done,Done,Medium,divya.maram,geetha.nallamada,8,Sprint 5 (27 Apr - 08 May),Quality,quality;checks,2026-04-27 09:20:00,2026-05-07 16:30:00,2026-05-07 16:30:00,,"2026-04-29 14:20:00;divya.maram;24 checks in. First full-suite run had three failures, all of them real: the seeded orphan customer ids, the negative quantities, and the missing emails.",2026-05-01 09:10:00;geetha.nallamada;Two of those three are things we deliberately injected and accept. That is the threshold conversation and it is worth having properly - see PULSE-41.,2026-05-07 16:28:00;divya.maram;Suite runs in about eleven seconds on the demo preset. Cheap enough to run on every push.,,
+Story,PULSE-40,10040,Reconciliation checks between layers,"As the business
+I want the layers to prove they agree with each other
+So that a number being wrong is detected by the platform, not by a stakeholder.
+
+The five reconciliations
+1. Line revenue must equal header revenue per order, within rounding tolerance
+2. mart_sales_daily revenue must equal fact_orders revenue for the same range
+3. Bronze completed order count must equal silver completed order count
+4. Every order header must have at least one order line (the PULSE-23 check)
+5. Payment amounts must reconcile to order totals for completed orders",,PULSE-3,Done,Done,High,geetha.nallamada,geetha.nallamada,5,Sprint 5 (27 Apr - 08 May),Quality,quality;reconciliation,2026-04-27 09:25:00,2026-05-08 15:20:00,2026-05-08 15:20:00,,2026-04-28 10:15:00;geetha.nallamada;These are the checks that would have caught both of our silent bugs so far. Everything else verifies that data looks reasonable; these verify that two things we computed separately agree.,"2026-05-05 11:30:00;divya.maram;Rounding tolerance on the line-to-header check is 0.01 per order, absolute, not relative. A relative tolerance on a small order is meaningless.","2026-05-08 15:18:00;geetha.nallamada;All five green. These are severity error, not warning - a reconciliation failure means one of two numbers we publish is wrong.",,
+Bug,PULSE-41,10041,Quality suite fails every night on 0.07% of customers with no email,"Observed: the completeness check on customer email fails on every run,
+because about 0.07% of customers genuinely have no email address.
+
+Impact: worse than it looks. Two weeks in, people had stopped reading the
+quality output entirely, which means the suite is catching nothing regardless
+of what it detects.
+
+Cause: zero-tolerance thresholds applied to a check that encodes an accepted
+business reality. Customers acquired in-store before email capture was
+mandatory do not have an email and never will.
+
+Fix: PULSE-42 - re-tune to a quantified warning threshold, and state in the
+check description that it encodes an accepted reality rather than a defect.",,PULSE-3,Done,Done,High,divya.maram,devendranath.singam,3,Sprint 5 (27 Apr - 08 May),Quality,quality;alert-fatigue,2026-05-04 09:15:00,2026-05-08 14:10:00,2026-05-08 14:10:00,,"2026-05-04 09:25:00;devendranath.singam;Raising this as a bug in the suite rather than in the data, because the data is fine. I have not read a quality report in nine days and neither, I suspect, has anyone else. A suite that fires every night is a suite that has been muted.","2026-05-04 10:40:00;geetha.nallamada;This is the most important ticket in the epic and it is a process bug. A zero-tolerance suite that fails nightly gets ignored, and an ignored suite catches nothing - so the tuning is not a compromise on rigour, it is what buys us any rigour at all.","2026-05-05 11:05:00;divya.maram;Went through all 24 checks. Four of them encode accepted realities: missing emails, the historic orphan customer ids, weekend FX carry-forward, and the small share of orders with no campaign attribution. Proposing quantified warning thresholds for those four and keeping the other twenty at zero.",2026-05-08 14:08:00;geetha.nallamada;Approved. Every non-zero threshold gets a comment in the check saying what accepted reality it encodes and who accepted it. A threshold without a reason becomes a threshold nobody dares change.,
+Task,PULSE-42,10042,Re-tune checks to quantified warning thresholds,"Convert the four checks that encode accepted business realities from
+zero-tolerance errors into warnings with quantified thresholds.
+
+* customer email completeness: warn above 0.15% missing (current 0.07%)
+* orphan customer ids on historic orders: warn above 0.5% (current 0.31%)
+* FX carry-forward share: warn above 35% of dates (current ~28%)
+* orders with no campaign attribution: warn above 40% (current 34%)
+
+Each threshold carries an inline comment naming the accepted reality and who
+accepted it. The remaining twenty checks stay at zero tolerance, severity
+error.",,PULSE-3,Done,Done,Medium,geetha.nallamada,geetha.nallamada,3,Sprint 5 (27 Apr - 08 May),Quality,quality;thresholds,2026-05-05 11:15:00,2026-05-08 16:05:00,2026-05-08 16:05:00,,"2026-05-06 15:30:00;geetha.nallamada;Thresholds are set above the current value with headroom, so they detect drift rather than restating today's number. A threshold set exactly at the observed value fails on the first ordinary fluctuation and we are back where we started.","2026-05-08 16:00:00;devendranath.singam;Ran clean twice this week - twenty passes, four warnings, no errors. I read the whole report this morning, which is the actual measure of success here.",,,
+Story,PULSE-43,10043,pytest warehouse fixture built from generated data,"As the team
+I want the test suite to build a real warehouse and query it
+So that tests exercise the SQL rather than our assumptions about the SQL.
+
+Acceptance criteria
+* tests/conftest.py builds a session-scoped warehouse from a small seeded
+  generated dataset
+* the same DDL and the same transformation code as production
+* no mocked query results anywhere in the suite
+* full build and teardown under 30 seconds",,PULSE-11,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 5 (27 Apr - 08 May),Quality,testing;fixtures,2026-04-28 09:30:00,2026-05-07 15:10:00,2026-05-07 15:10:00,,"2026-04-30 10:20:00;divya.maram;Session-scoped so we build once and share across the suite. Function scope was correct and took four minutes, which meant nobody would run it locally.",2026-05-07 15:05:00;geetha.nallamada;Accepted. Every bug we have had so far was in SQL that a mock would have happily agreed with.,,,
+Task,PULSE-44,10044,Run the quality suite in CI,"Add the quality suite to the CI pipeline after the warehouse build.
+
+Acceptance criteria
+* the suite runs on every push after the gold build
+* a severity-error failure fails the build; a warning does not
+* the results summary is printed in the job output, readable without
+  downloading an artifact",,PULSE-10,Done,Done,Medium,devendranath.singam,geetha.nallamada,3,Sprint 5 (27 Apr - 08 May),CI;Quality,ci;quality,2026-04-28 09:35:00,2026-05-06 14:20:00,2026-05-06 14:20:00,,"2026-05-06 14:15:00;devendranath.singam;Errors fail the build, warnings are printed. Now that the warning set means something (PULSE-42) this split actually works - before the re-tune this would have failed every build on day one.",,,,
+Story,PULSE-45,10045,dim_date,"As the model
+I want a full date dimension
+So that period comparisons and fiscal reporting stop being ad-hoc SQL.
+
+Acceptance criteria
+* database/warehouse/020_dim_date.sql covering the full data range plus two
+  years forward
+* calendar and fiscal attributes, ISO week, day of week, weekend flag,
+  month and quarter start and end flags, holiday flag for the trading regions
+* prior-period and prior-year keys precomputed",,PULSE-4,Done,Done,Medium,divya.maram,geetha.nallamada,3,Sprint 6 (11 May - 22 May),Warehouse,gold;dimension,2026-05-11 09:20:00,2026-05-15 15:30:00,2026-05-15 15:30:00,,2026-05-13 10:15:00;divya.maram;Precomputing the prior-period and prior-year keys. Every period-over-period query otherwise reinvents that join and about a third of them get the leap year or the ISO week boundary wrong.,2026-05-15 15:25:00;geetha.nallamada;Accepted.,,,
+Story,PULSE-46,10046,Seven conformed dimensions with surrogate keys,"As the model
+I want conformed dimensions with surrogate keys
+So that facts join consistently and a source key change does not break history.
+
+Dimensions: date, customer, product, store, channel, campaign, geography.
+
+Acceptance criteria
+* database/warehouse/021_dimensions.sql
+* surrogate integer key on each, natural key retained and indexed
+* conformed - one customer dimension shared by every fact that needs it
+* documented grain in each file header",,PULSE-4,Done,Done,Medium,geetha.nallamada,geetha.nallamada,8,Sprint 6 (11 May - 22 May),Warehouse,gold;dimension,2026-05-11 09:25:00,2026-05-21 16:40:00,2026-05-21 16:40:00,,"2026-05-14 11:30:00;geetha.nallamada;Conformed is the word doing the work. One customer dimension, joined by orders, payments and events alike. The moment there are two, 'customers who bought' and 'customers who clicked' become unjoinable and nobody notices until the funnel numbers disagree.",2026-05-21 16:35:00;divya.maram;All seven built and joining cleanly. Grain stated at the top of each block.,,,
+Task,PULSE-47,10047,Unknown members on -1 for every dimension,"Every dimension carries an Unknown member on surrogate key -1. Facts with an
+unresolvable natural key join to it rather than being dropped or nulled.
+
+Acceptance criteria
+* -1 row in all seven dimensions with descriptive Unknown labels
+* fact builds map unresolved keys to -1, never to null
+* a quality check counts fact rows on -1 per dimension, so the volume of
+  unresolved keys is a visible number rather than an invisible loss",,PULSE-4,Done,Done,Medium,geetha.nallamada,geetha.nallamada,2,Sprint 6 (11 May - 22 May),Warehouse,gold;dimension,2026-05-11 09:30:00,2026-05-19 14:20:00,2026-05-19 14:20:00,,"2026-05-18 10:40:00;geetha.nallamada;The check counting rows on -1 is the point of the whole ticket. An Unknown member without a count is the same silent data loss as an inner join, just with better manners.","2026-05-19 14:15:00;divya.maram;0.31% of order facts land on customer -1, which matches the seeded orphan ids exactly. Good - it means the number is real and we know what it is.",,,
+Story,PULSE-48,10048,fact_orders at header grain,"As the model
+I want an order-grain fact table
+So that order-level metrics are computed at order level.
+
+Acceptance criteria
+* one row per order
+* net_amount, gross_amount, discount, shipping, tax, cost_amount
+* is_revenue flag implementing the agreed revenue definition
+* cancelled, returned and pending orders present and flagged, not filtered
+* dimension keys resolved to surrogates, unresolved keys on -1",,PULSE-4,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 6 (11 May - 22 May),Warehouse,gold;fact,2026-05-12 09:15:00,2026-05-20 15:50:00,2026-05-20 15:50:00,,"2026-05-15 09:50:00;divya.maram;Non-completed orders stay in the fact, flagged. Operations needs to see cancellations and returns, and filtering them here means building a second pipeline for operations later.","2026-05-20 15:45:00;geetha.nallamada;Accepted. is_revenue is defined once, in silver, and read here - not restated as a status list.",,,
+Story,PULSE-49,10049,fact_sales at line grain,"As the model
+I want a line-grain sales fact alongside the header-grain order fact
+So that product and basket analysis has the right grain to work at.
+
+Acceptance criteria
+* database/warehouse/022_fact_sales.sql, one row per order line
+* line-level quantity, unit price, discount, net amount and cost
+* line revenue sums to header revenue per order, within tolerance, and this
+  is check number one in PULSE-40
+* the file header states the grain and warns against header-grain metrics",,PULSE-4,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 6 (11 May - 22 May),Warehouse,gold;fact,2026-05-12 09:20:00,2026-05-22 16:00:00,2026-05-22 16:00:00,,2026-05-18 14:10:00;devendranath.singam;Genuine question rather than a challenge: two facts holding the same revenue looks like duplication. What stops them drifting apart?,"2026-05-18 14:35:00;geetha.nallamada;Reconciliation check one, which fails the build if they disagree by more than a penny per order. And the duplication is the point - see PULSE-50. The alternative is one line-grain fact and a standing invitation to compute AOV wrongly.","2026-05-22 15:55:00;divya.maram;Both facts built, reconciliation green across the full demo range.",,
+Task,PULSE-50,10050,"ADR-003: Two order grains, kept explicit","Decision: keep fact_orders at header grain and fact_sales at line grain, and
+require every metric to name the grain it is computed at.
+
+Rationale: header-grain metrics - AOV, orders per customer, basket size -
+computed from line-grain rows are wrong in a way that produces a plausible
+number and no error. Two explicit facts make the mistake structurally
+impossible rather than merely discouraged in a code review.
+
+Cost accepted: storage duplication of order-level values, and a reconciliation
+check that must stay green.
+
+Rejected alternative: one line-grain fact with a distinct-count discipline.
+Rejected because the discipline lives in the head of whoever writes the query.",,PULSE-4,Done,Done,Medium,geetha.nallamada,geetha.nallamada,1,Sprint 6 (11 May - 22 May),Docs,adr;decision;modelling,2026-05-18 15:00:00,2026-05-21 11:30:00,2026-05-21 11:30:00,,"2026-05-21 11:25:00;geetha.nallamada;Written up with Deven's duplication question as the rejected alternative, because it is the obvious objection and the ADR should answer it rather than pretend nobody raised it.",,,,
+Story,PULSE-51,10051,fact_payments,"As the business
+I want a payment fact at attempt grain
+So that gateway performance and payment failure are measurable.
+
+Acceptance criteria
+* database/warehouse/023_fact_payments.sql, one row per payment attempt
+* attempt sequence number per order
+* both success rate denominators supported: per attempt and per order
+* gateway, method and failure reason as dimension attributes",,PULSE-4,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 7 (25 May - 05 Jun),Warehouse,gold;fact,2026-05-25 09:20:00,2026-06-02 15:40:00,2026-06-02 15:40:00,,"2026-05-28 10:30:00;divya.maram;Attempt grain, with the sequence number, so a retried-then-succeeded payment is legible. Aggregating to order grain loses the retry story, which is the part the gateway conversation needs.",2026-06-02 15:35:00;geetha.nallamada;Accepted. This fact is what the real-time payment monitoring will reconcile against later.,,,
+Story,PULSE-52,10052,fact_inventory and fact_events,"As the model
+I want inventory snapshots and clickstream events as facts
+So that stock health and funnel analysis join to the same dimensions as sales.
+
+Acceptance criteria
+* 024_fact_inventory.sql - periodic snapshot grain, one row per product,
+  location, date
+* 025_fact_events.sql - transaction grain, one row per event
+* both joined to conformed dimensions
+* snapshot grain documented explicitly, because it is not additive over time",,PULSE-4,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 7 (25 May - 05 Jun),Warehouse,gold;fact,2026-05-25 09:25:00,2026-06-04 16:20:00,2026-06-04 16:20:00,,"2026-05-29 11:15:00;divya.maram;Writing 'this is a periodic snapshot, do not sum stock_on_hand over dates' at the top of the inventory file in as many words. It is the single most common mistake against this table shape.","2026-06-04 16:15:00;geetha.nallamada;Accepted, and a semi-additive note goes into the KPI document as well.",,,
+Task,PULSE-53,10053,Warehouse indexes and query plan review,"Index the gold layer and review the plans for the queries the dashboards will
+actually run.
+
+Acceptance criteria
+* database/warehouse/026_indexes.sql
+* foreign key columns on every fact indexed
+* date key indexed on every fact
+* the ten most common dashboard query shapes reviewed on both engines
+* before and after timings recorded in the ticket",,PULSE-4,Done,Done,Medium,devendranath.singam,geetha.nallamada,3,Sprint 7 (25 May - 05 Jun),Warehouse;Platform,performance,2026-05-26 09:15:00,2026-06-03 14:50:00,2026-06-03 14:50:00,,"2026-06-01 15:20:00;devendranath.singam;Sales-by-region-by-month on the largest preset: 8.4s before, 0.6s after. The date key index does nearly all of that on its own.","2026-06-03 14:45:00;geetha.nallamada;Accepted. Worth rerunning this after the marts land, since the marts will change the query shapes considerably.",,,
+Story,PULSE-54,10054,dim_customer_history with the SCD Type 2 shape,"As the model
+I want a Type 2 customer dimension in place, in the correct shape
+So that adding real change capture later is a data problem, not a redesign.
+
+Acceptance criteria
+* valid_from, valid_to, is_current, version columns
+* one version per customer for now, because the source ships no change history
+* documented in the file header: the shape is real, the history is not, and
+  what it would take to make it real",,PULSE-4,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 7 (25 May - 05 Jun),Warehouse,gold;scd2,2026-05-26 09:20:00,2026-06-05 15:20:00,2026-06-05 15:20:00,,2026-05-29 10:05:00;devendranath.singam;Is building a Type 2 table with one version per customer worth doing at all right now?,"2026-05-29 10:40:00;geetha.nallamada;Fair challenge. It is worth it because every consumer downstream writes its joins against the shape, and retrofitting valid_from into thirty existing queries is the expensive version. But I have written honestly in the header that the history is not real yet, so nobody builds a tier-at-time-of-purchase analysis on it and gets a confidently wrong answer. Real change capture is PULSE-119.","2026-06-05 15:15:00;divya.maram;Built, and the header says exactly that. Accepted.",,
+Story,PULSE-55,10055,mart_sales_daily and mart_sales_monthly,"As the business
+I want daily and monthly sales marts
+So that the recurring questions are answered without touching the facts.
+
+Acceptance criteria
+* 031_mart_sales_daily.sql and 032_mart_sales_monthly.sql
+* revenue, orders, units, AOV, gross profit, margin percent
+* AOV computed at header grain from fact_orders, per PULSE-25 and PULSE-50
+* daily mart reconciles to fact_orders - reconciliation check two
+* period-over-period and year-over-year comparisons using dim_date keys",,PULSE-5,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 7 (25 May - 05 Jun),Warehouse,mart;sales,2026-05-27 09:20:00,2026-06-05 16:30:00,2026-06-05 16:30:00,,"2026-06-01 11:40:00;geetha.nallamada;First mart, and the first place the AOV grain trap can actually bite. See PULSE-56 - it bit.",2026-06-05 16:25:00;divya.maram;Reconciliation check two is green and the daily mart matches the fact across the full range.,,,
+Bug,PULSE-56,10056,AOV reported 40% low - averaged from the line fact,"Observed: AOV in the first draft of mart_sales_daily reads about 40% below the
+figure finance calculates by hand.
+
+Impact: none published - caught before the mart was released. Had it shipped,
+it would have been quoted in the monthly review and would have looked entirely
+plausible.
+
+Cause: AOV was computed as AVG(net_amount) over fact_sales, which is line
+grain. It is the average line value, not the average order value.
+
+Fix: compute from fact_orders at header grain, per the definition written in
+PULSE-25 in March. Add a quality check comparing mart AOV against a header
+grain recomputation.",,PULSE-5,Done,Done,Highest,geetha.nallamada,divya.maram,3,Sprint 7 (25 May - 05 Jun),Warehouse,grain;kpi;aov,2026-06-01 11:45:00,2026-06-04 12:30:00,2026-06-04 12:30:00,,"2026-06-01 11:50:00;divya.maram;Spotted it because the number looked low against what finance quotes, not because anything failed. Which is exactly what PULSE-25 said would happen - there is no error for averaging the wrong grain.","2026-06-01 12:20:00;geetha.nallamada;We wrote the warning down in March and then walked straight into it in June. I am not treating that as a failure of the documentation - the document is how Divya knew to be suspicious. But it is the argument for the check, because documentation does not run nightly.",2026-06-02 09:35:00;devendranath.singam;Adding my vote for the check. Two explicit facts (PULSE-50) made the mistake possible to detect; only an assertion makes it impossible to ship.,"2026-06-04 12:25:00;geetha.nallamada;Fixed and the check is in. Retro item: any metric with a grain judgement in its definition gets an assertion when it is first implemented, not when it first goes wrong.",
+Story,PULSE-57,10057,Streamlit shell and the data access layer,"As a stakeholder
+I want one application with a page per subject area
+So that I am not sent five different links.
+
+Acceptance criteria
+* dashboards/streamlit/app.py with multipage navigation
+* dashboards/streamlit/data_access.py is the only module that talks to the
+  warehouse - no page issues its own SQL
+* query results cached with a documented TTL
+* the as-of date from gold.analysis_window shown on every page",,PULSE-5,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 8 (08 Jun - 19 Jun),Dashboards,dashboard,2026-06-08 09:20:00,2026-06-17 16:10:00,2026-06-17 16:10:00,,"2026-06-10 10:30:00;divya.maram;One data access module rather than SQL scattered through the pages. When a definition changes there is exactly one place to change it, and the pages stay about presentation.","2026-06-17 16:05:00;geetha.nallamada;Accepted. The as-of date on every page is not optional - if the platform's today is not the calendar's today, the page has to say so out loud.",,,
+Story,PULSE-58,10058,Chart design system in theme.py,"As a reader of these dashboards
+I want every chart to follow the same visual rules
+So that I can read a new chart without relearning what the colours mean.
+
+Rules
+* one palette, defined once, colour-blind safe, legible in light and dark
+* one hue per entity, consistent across every page - a region is the same
+  colour everywhere
+* fixed categorical order, never sorted by value between renders
+* sequential ramps for magnitude only, diverging only around a real midpoint
+* no dual axes, ever
+* direct labelling in preference to legends where the series count allows",,PULSE-5,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 8 (08 Jun - 19 Jun),Dashboards,dashboard;design-system,2026-06-08 09:25:00,2026-06-18 15:30:00,2026-06-18 15:30:00,,"2026-06-09 11:15:00;geetha.nallamada;Doing this before the first chart rather than after the thirtieth. Retrofitting consistency across a built estate is an order of magnitude more expensive, and half of it never gets done.",2026-06-12 14:20:00;divya.maram;Fixed categorical order caught something already. A bar chart sorted by value redrew in a different order between two refreshes and I misread the change as a data problem for about ten minutes.,"2026-06-18 15:25:00;geetha.nallamada;Merged. The no-dual-axis rule is the one I expect to be argued with most, and PULSE-59 records why it holds.",,
+Task,PULSE-59,10059,"ADR-004: No dual axes, fixed categorical order","Decision: charts in this platform never use a secondary y-axis, and
+categorical series keep a fixed declared order rather than sorting by value.
+
+Rationale for no dual axes: the crossing point of two series on independent
+scales is an artefact of the scales chosen, and readers consistently read it
+as a real event. Where two measures must be compared, use two aligned charts
+or index both to a common base.
+
+Rationale for fixed order: a chart that reorders between renders makes change
+detection unreliable, and a reader who has learned a layout should be able to
+keep using it.
+
+Cost accepted: some comparisons need two charts where one would have fit.",,PULSE-5,Done,Done,Medium,geetha.nallamada,geetha.nallamada,1,Sprint 8 (08 Jun - 19 Jun),Docs,adr;decision;design-system,2026-06-09 11:30:00,2026-06-15 12:00:00,2026-06-15 12:00:00,,"2026-06-15 11:55:00;geetha.nallamada;Written up with the alternatives, so that when someone wants revenue and margin on one chart there is a documented answer rather than a debate.",,,,
+Story,PULSE-60,10060,mart_product_performance,"As a category manager
+I want product-level performance in one mart
+So that assortment decisions do not need bespoke SQL each time.
+
+Acceptance criteria
+* 033_mart_product_performance.sql at product and month grain
+* revenue, units, margin, return rate, rank within category
+* contribution to category revenue, and a Pareto position
+* built on fact_sales at line grain, which is the correct grain here",,PULSE-5,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 8 (08 Jun - 19 Jun),Warehouse,mart;product,2026-06-08 09:30:00,2026-06-19 15:00:00,2026-06-19 15:00:00,,"2026-06-16 10:50:00;divya.maram;Line grain is right for this one, and I have said so in the header. After PULSE-56 I would rather every mart state which fact it is built on and why.",2026-06-19 14:55:00;geetha.nallamada;Accepted. That header convention should apply to all marts - please add it to the ones already built when you next touch them.,,,
+Task,PULSE-61,10061,"Prepare QA onboarding - access, environment and runbook","Get everything in place before the QA analyst starts on 15 Jun, so that day
+one is doing the job rather than raising access tickets.
+
+Checklist
+* Jira, Confluence, GitHub and Slack access requested
+* dev warehouse read role approved
+* a written runbook: clone, venv, generate data, build warehouse, run tests,
+  run the dashboards
+* first-week goals agreed and written down",,PULSE-11,Done,Done,Medium,geetha.nallamada,geetha.nallamada,2,Sprint 8 (08 Jun - 19 Jun),Platform,onboarding,2026-06-09 09:00:00,2026-06-12 16:00:00,2026-06-12 16:00:00,,"2026-06-09 09:30:00;devendranath.singam;Access requests are in. GitHub and Slack are instant; the warehouse read role needs the data owner and that took nine days for Divya, so it is raised now.","2026-06-12 15:55:00;geetha.nallamada;Runbook written and dry-run by Deven from a clean machine. First-week goal is deliberately narrow: build the warehouse, run the suite, and write down what is not covered.",,,
+Task,PULSE-62,10062,QA onboarding - Neha Chauhan,"First week for the QA analyst joining 15 Jun 2026.
+
+* environment up and warehouse built locally
+* full pipeline and quality suite run end to end
+* walkthrough of the medallion layers, the KPI contract and the four ADRs
+* produce a written gap analysis: what the current tests do not cover",,PULSE-11,Done,Done,Medium,neha.chauhan,geetha.nallamada,3,Sprint 8 (08 Jun - 19 Jun),Quality,onboarding,2026-06-15 09:30:00,2026-06-19 16:30:00,2026-06-19 16:30:00,,"2026-06-15 14:20:00;neha.chauhan;Environment is up and the warehouse built on the second attempt - the first failed because I had not run the generator first. Worth one line in the runbook, since it is the kind of thing that is obvious once you know it.","2026-06-17 11:40:00;neha.chauhan;Read through the KPI document and the ADRs. The thing that stands out is that most of the past bugs were silent rather than loud, so my gap analysis is going to be mostly about assertions between layers rather than more unit tests.","2026-06-19 16:25:00;neha.chauhan;Gap analysis written. Three areas with no coverage at all: the dashboards, the analytics modules, and anything asserting that ops tables survive a rebuild. The third one worries me most because a rebuild is routine.",2026-06-19 16:45:00;geetha.nallamada;That third point is a good instinct and it is now PULSE-86. Welcome aboard.,
+Story,PULSE-63,10063,Test strategy and regression scope by layer,"As the team
+I want a written statement of what is tested at each layer
+So that ""covered"" means something specific rather than a count of tests.
+
+Acceptance criteria
+* per layer - bronze, silver, gold, marts, analytics, dashboards, streaming -
+  what is asserted, what is deliberately not, and why
+* the difference between the quality suite and the test suite stated plainly
+* the regression pack per layer identified, and gaps listed as tickets",,PULSE-11,Done,Done,Medium,neha.chauhan,geetha.nallamada,5,Sprint 8 (08 Jun - 19 Jun),Quality,testing;strategy,2026-06-16 09:15:00,2026-06-19 15:40:00,2026-06-19 15:40:00,,"2026-06-17 10:10:00;neha.chauhan;Drawing the line as: the quality suite asserts things about the data on every run; the test suite asserts things about the code on every push. Both matter and they are not substitutes, which is not obvious from the outside.",2026-06-18 14:30:00;divya.maram;That distinction is clearer than how we had been describing it internally. Worth putting in the README rather than only in the strategy doc.,2026-06-19 15:35:00;geetha.nallamada;Approved.,,
+Story,PULSE-64,10064,Executive dashboard page,"As an executive
+I want revenue, margin, orders and growth on one page
+So that the monthly review starts from an agreed number.
+
+Acceptance criteria
+* headline tiles: revenue, gross margin percent, orders, AOV, each with a
+  period-over-period comparison
+* revenue trend with a prior-year comparison series
+* top and bottom performing categories and regions
+* every tile traceable to a definition in the KPI document
+* as-of date visible",,PULSE-5,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 9 (22 Jun - 03 Jul),Dashboards,dashboard;executive,2026-06-22 09:20:00,2026-07-02 16:00:00,2026-07-02 16:00:00,,"2026-06-25 11:20:00;geetha.nallamada;Every tile links to its definition. If someone disagrees with a number, the argument should start at the definition rather than at the chart.","2026-07-01 10:15:00;neha.chauhan;Tested against a hand-computed set from the generated data. All tiles match. One note: the period-over-period comparison on the first day of a month compares against a single day, which is technically correct and reads as a 90% collapse.","2026-07-02 15:55:00;geetha.nallamada;Good catch. Added a partial-period label to the comparison rather than hiding it - the reader needs to know the period is incomplete, not be protected from it.",,
+Story,PULSE-65,10065,Sales dashboard page,"As a sales manager
+I want to explore sales by product, region, channel and time
+So that I can answer my own questions without raising a request.
+
+Acceptance criteria
+* filters: date range, region, channel, category
+* trend, breakdown by dimension, product table with sortable measures
+* drill from category to product
+* filters reflected in every chart on the page, with the active filter set
+  stated in plain language",,PULSE-5,Done,Done,Medium,divya.maram,geetha.nallamada,8,Sprint 9 (22 Jun - 03 Jul),Dashboards,dashboard;sales,2026-06-22 09:25:00,2026-07-03 15:30:00,2026-07-03 15:30:00,,"2026-06-29 14:40:00;divya.maram;Stating the active filters in a sentence at the top of the page. Screenshots of filtered dashboards get pasted into decks with no indication of what was filtered, and then argued about.","2026-07-02 11:05:00;neha.chauhan;Filter combinations tested including the empty result case, which previously rendered an empty chart with no explanation. Now shows a message saying no data matches.",2026-07-03 15:25:00;geetha.nallamada;Accepted.,,
+Bug,PULSE-66,10066,Dual-axis chart on the sales page,"Observed: the revenue-and-margin chart on the sales page uses a secondary
+y-axis, against ADR-004.
+
+Impact: the two series cross in September in the demo data. The crossing point
+is an artefact of the two scales and reads as a real event.
+
+Fix: split into two aligned charts sharing an x-axis.",,PULSE-5,Done,Done,Medium,divya.maram,neha.chauhan,2,Sprint 9 (22 Jun - 03 Jul),Dashboards,design-system;dashboard,2026-06-30 10:20:00,2026-07-02 14:10:00,2026-07-02 14:10:00,,"2026-06-30 10:25:00;neha.chauhan;Raising this from ADR-004 rather than from taste. The ADR says never, and reviewing against a written rule is much easier than reviewing against an opinion.",2026-06-30 11:40:00;divya.maram;Guilty - it was the quickest way to get both series in one place and I talked myself into it. Splitting into two aligned charts.,"2026-07-02 14:05:00;geetha.nallamada;Fixed and verified. This is the ADR earning its keep in a code review, which is exactly what it is for.",,
+Story,PULSE-67,10067,mart_regional_store,"As a regional manager
+I want regional and store performance in one mart
+So that comparisons between stores are consistent.
+
+Acceptance criteria
+* 038_mart_regional_store.sql at region, store and month grain
+* revenue in reporting and local currency
+* like-for-like comparison excluding stores open less than 13 months, with
+  the exclusion count exposed rather than silent",,PULSE-5,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 9 (22 Jun - 03 Jul),Warehouse,mart;regional,2026-06-23 09:15:00,2026-07-01 15:20:00,2026-07-01 15:20:00,,2026-06-26 10:30:00;divya.maram;Like-for-like exposes how many stores were excluded and why. A like-for-like number without that count is an unfalsifiable claim.,"2026-07-01 15:15:00;geetha.nallamada;Accepted, and local currency alongside reporting currency as agreed in PULSE-34.",,,
+Story,PULSE-68,10068,Dashboard smoke tests,"As the team
+I want automated checks that every page renders and its numbers match the
+warehouse
+So that a mart change cannot silently break a page.
+
+Acceptance criteria
+* tests/test_dashboards.py imports each page and exercises its data functions
+* headline tile values asserted against a direct warehouse query
+* runs in CI
+* a broken page fails the build",,PULSE-11,Done,Done,Medium,neha.chauhan,geetha.nallamada,5,Sprint 9 (22 Jun - 03 Jul),Quality;Dashboards,testing;dashboard,2026-06-23 09:20:00,2026-07-03 16:10:00,2026-07-03 16:10:00,,2026-06-29 11:50:00;neha.chauhan;Asserting the tile values against a direct query rather than only that the page renders. A page that renders confidently wrong numbers is worse than one that crashes.,"2026-07-03 16:05:00;divya.maram;Merged and green. It caught a stale column reference on the sales page during development, which is the first time a dashboard bug has been caught by CI rather than by a person.",,,
+Bug,PULSE-69,10069,Executive page 4x slower after the region filter landed,"Observed: executive page load went from about 1.1s to 4.6s on the largest
+preset after the region filter was added.
+
+Cause: the filter was applied in Python after loading the full unfiltered
+result set, and the cache key did not include the filter values, so every
+filter change was a cache miss on a full scan.
+
+Fix: push the filter into SQL, include filter values in the cache key.",,PULSE-5,Done,Done,Medium,devendranath.singam,neha.chauhan,3,Sprint 9 (22 Jun - 03 Jul),Dashboards;Platform,performance,2026-06-29 15:10:00,2026-07-02 11:20:00,2026-07-02 11:20:00,,"2026-06-29 15:15:00;neha.chauhan;Noticed on the largest preset, which is why it is worth testing against something bigger than the demo set. On the demo data it is imperceptible.","2026-07-02 11:15:00;devendranath.singam;Filter pushed into SQL, cache key fixed. Back to 0.9s, slightly better than before because the filtered query touches less data.",,,
+Story,PULSE-70,10070,mart_executive,"As the executive page
+I want a purpose-built mart
+So that headline tiles are one small read rather than several large ones.
+
+Acceptance criteria
+* 041_mart_executive.sql, pre-aggregated to the tile grain
+* period-over-period and year-over-year precomputed
+* reconciles to mart_sales_daily, added as a reconciliation check",,PULSE-5,Done,Done,Medium,geetha.nallamada,geetha.nallamada,3,Sprint 9 (22 Jun - 03 Jul),Warehouse,mart;executive,2026-06-24 09:15:00,2026-07-03 14:40:00,2026-07-03 14:40:00,,"2026-07-03 14:35:00;geetha.nallamada;Reconciliation against the daily mart added, so a pre-aggregation that drifts from its source fails the build rather than quietly disagreeing with the sales page.",,,,
+Story,PULSE-71,10071,mart_customer_360,"As the business
+I want one row per customer with their full commercial picture
+So that customer questions have a single starting point.
+
+Acceptance criteria
+* 034_mart_customer_360.sql, one row per customer
+* first and last order date, lifetime orders, lifetime revenue, average order
+  value at header grain, tenure, recency, preferred category and channel
+* recency anchored to gold.analysis_window
+* customers with no orders present, not filtered out",,PULSE-6,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 10 (06 Jul - 17 Jul),Warehouse,mart;customer,2026-07-06 09:20:00,2026-07-15 15:40:00,2026-07-15 15:40:00,,"2026-07-08 10:20:00;geetha.nallamada;Zero-order customers stay in. They are the denominator of activation, and filtering them here is how activation problems become invisible - see PULSE-74, which is the same mistake in a different costume.","2026-07-15 15:35:00;divya.maram;Accepted. Every recency column reads analysis_window, verified by the CURRENT_DATE test.",,,
+Story,PULSE-72,10072,mart_rfm_segments,"As marketing
+I want customers scored and segmented on recency, frequency and monetary value
+So that campaigns can target behaviour rather than guesswork.
+
+Acceptance criteria
+* 035_mart_rfm_segments.sql with quintile scores on each axis
+* named segments - Champions, Loyal, At Risk, Hibernating, Lost, New
+* segment boundaries defined in the KPI document, not only in SQL
+* recency anchored to analysis_window
+* segment sizes stable between runs on the same data",,PULSE-6,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 10 (06 Jul - 17 Jul),Warehouse,mart;customer;rfm,2026-07-06 09:25:00,2026-07-16 16:00:00,2026-07-16 16:00:00,,"2026-07-10 11:30:00;divya.maram;Quintiles over the active customer base rather than fixed thresholds, so the segmentation stays meaningful as the business grows. Documented, because it means a customer can change segment without changing behaviour if the base shifts around them.","2026-07-14 09:45:00;neha.chauhan;Ran the segmentation twice on the same dataset and got identical sizes. That is only true because of the analysis window - worth a regression test, so I have put it in the customer pack.","2026-07-16 15:55:00;geetha.nallamada;Accepted, and the boundary definitions are in the KPI document.",,
+Story,PULSE-73,10073,mart_cohort_retention,"As the business
+I want monthly acquisition cohorts and their retention curves
+So that we can see whether retention is improving.
+
+Acceptance criteria
+* 036_mart_cohort_retention.sql at cohort month and period number grain
+* cohort defined by first purchase month - see PULSE-74
+* retention as active customers in period divided by cohort size
+* the same dataset produces the same curve on every run",,PULSE-6,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 10 (06 Jul - 17 Jul),Warehouse,mart;customer;cohort,2026-07-07 09:15:00,2026-07-17 15:10:00,2026-07-17 15:10:00,,2026-07-13 14:20:00;geetha.nallamada;First version was built on signup month and produced a retention cliff at month one that nobody could explain. See PULSE-74.,"2026-07-17 15:05:00;divya.maram;Rebuilt on first purchase month. The curve is now smooth and, more importantly, it is stable across runs.",,,
+Bug,PULSE-74,10074,Cohorts defined on signup month show an activation problem as churn,"Observed: cohorts built on signup month show a retention cliff of roughly 60%
+between period 0 and period 1.
+
+Diagnosis: it is not a retention problem. A large share of signups never
+purchase at all, so they enter a cohort and leave it without ever having been
+a customer. The cliff is the activation rate wearing a retention costume, and
+it was about to be presented to the board as a retention crisis.
+
+Fix: define a cohort by the month of first purchase, so cohort membership
+means ""became a customer"". Activation is a separate metric, defined
+separately, and it is a real problem worth its own workstream.",,PULSE-6,Done,Done,High,geetha.nallamada,geetha.nallamada,3,Sprint 10 (06 Jul - 17 Jul),Warehouse,definitions;cohort;customer,2026-07-13 14:25:00,2026-07-16 12:00:00,2026-07-16 12:00:00,,2026-07-13 14:50:00;divya.maram;This is the second time a definition choice has produced a plausible and completely misleading picture. The first was AOV. Both were caught by someone thinking the number looked odd rather than by anything automated.,"2026-07-14 09:20:00;geetha.nallamada;Right, and I do not think that is fully fixable with assertions - a definition can be internally consistent and still answer the wrong question. What we can do is require every cohort-shaped metric to state its membership rule on the chart itself, so a reader can catch what a test cannot.",2026-07-14 15:30:00;neha.chauhan;I can assert the mechanical part: cohort size must equal the count of customers whose first order falls in that month. That catches a regression even if it cannot catch a bad definition.,2026-07-16 11:55:00;geetha.nallamada;Both done. And the activation finding goes to the business as a finding rather than being quietly absorbed into a definition change - it is genuinely the more useful discovery of the two.,
+Story,PULSE-75,10075,mart_churn_monthly,"As retention
+I want a monthly churn view with a stated definition
+So that churn is measurable and arguable on the definition rather than the
+number.
+
+Acceptance criteria
+* churn defined for a non-contractual business: no purchase within the
+  customer's expected repurchase window, defined per segment
+* the definition and its judgement calls written into the KPI document
+* monthly churned count, churn rate and revenue at risk
+* anchored to analysis_window",,PULSE-6,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 10 (06 Jul - 17 Jul),Warehouse,mart;customer;churn,2026-07-07 09:20:00,2026-07-17 16:20:00,2026-07-17 16:20:00,,"2026-07-09 10:40:00;divya.maram;Churn in a non-contractual setting is a judgement, not an observation. Nobody cancels - they just stop. Writing the window rule down with its arbitrariness admitted rather than presenting it as measured fact.","2026-07-17 16:15:00;geetha.nallamada;Accepted. Per-segment windows rather than one global window, since a weekly-grocery customer and an annual-electronics customer are not comparable on a single threshold.",,,
+Story,PULSE-76,10076,CLV curves,"As marketing
+I want customer lifetime value by cohort and channel
+So that acquisition spend can be judged against what a customer is worth.
+
+Acceptance criteria
+* analytics/customer/clv.py with an explainable formula: average order value,
+  purchase frequency, expected lifespan, margin
+* cumulative realised value curves by cohort, not only a projected figure
+* the projection horizon stated and the assumption labelled on the chart",,PULSE-6,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 10 (06 Jul - 17 Jul),Analytics,customer;clv,2026-07-08 09:15:00,2026-07-17 14:50:00,2026-07-17 14:50:00,,"2026-07-10 11:20:00;geetha.nallamada;An explainable formula over a fitted probabilistic model. Marketing has to defend an acquisition budget with this number, and a number they cannot explain is a number they cannot defend.","2026-07-15 10:30:00;divya.maram;Realised curves alongside the projection, which is the honest version - the projection is an assumption and the realised curve is a measurement, and they should not look alike on a chart.",2026-07-17 14:45:00;geetha.nallamada;Accepted.,,
+Task,PULSE-77,10077,Regression pack for the customer marts,"Regression coverage for customer_360, RFM, cohort retention and churn.
+
+Assertions
+* customer_360 row count equals distinct customers in the dimension
+* RFM segment sizes sum to the active customer count
+* cohort size equals distinct customers whose first order is in that month
+* every recency metric changes when analysis_window moves, and not otherwise
+* two consecutive runs on the same data produce identical output",,PULSE-11,Done,Done,Medium,neha.chauhan,geetha.nallamada,5,Sprint 10 (06 Jul - 17 Jul),Quality,testing;customer,2026-07-08 09:20:00,2026-07-17 16:40:00,2026-07-17 16:40:00,,"2026-07-14 15:35:00;neha.chauhan;The determinism assertion is the one I care most about. It is the property that makes every other test meaningful, and it is invisible until it breaks.",2026-07-17 16:35:00;geetha.nallamada;Agreed and accepted. That assertion is effectively a test of ADR-002 rather than of any one mart.,,,
+Story,PULSE-78,10078,Customer dashboard page,"As marketing and retention
+I want the customer analytics on one page
+So that segments, cohorts and value are read together.
+
+Acceptance criteria
+* RFM segment overview with sizes and revenue contribution
+* cohort retention heatmap using a sequential ramp, magnitude only
+* CLV curves by cohort, projection visually distinct from realised
+* churn trend with the definition stated on the page
+* segment membership rule visible on the cohort chart, per PULSE-74",,PULSE-6,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 11 (20 Jul - 31 Jul),Dashboards,dashboard;customer,2026-07-20 09:20:00,2026-07-30 16:00:00,2026-07-30 16:00:00,,"2026-07-24 11:15:00;divya.maram;Sequential ramp on the heatmap, single hue. Retention is a magnitude, and a diverging palette here would invent a midpoint that does not exist.","2026-07-29 10:20:00;neha.chauhan;Verified every figure on the page against the marts. Also checked the empty-segment case, which now renders a labelled empty state rather than a blank panel.",2026-07-30 15:55:00;geetha.nallamada;Accepted.,,
+Story,PULSE-79,10079,Event bus abstraction with two implementations,"As the platform
+I want one bus interface with a file-based and a Kafka implementation
+So that streaming can be developed and tested without a broker.
+
+Acceptance criteria
+* streaming/bus.py defines publish, subscribe and commit
+* NDJSON file implementation for local development and CI
+* Kafka/Redpanda implementation for the deployed path
+* the same consumer code runs against both, unmodified
+* offsets persisted per consumer group in both implementations",,PULSE-7,Done,Done,Medium,devendranath.singam,geetha.nallamada,8,Sprint 11 (20 Jul - 31 Jul),Streaming,streaming;architecture,2026-07-20 09:25:00,2026-07-30 16:59:00,2026-07-30 16:59:00,,"2026-07-22 10:30:00;devendranath.singam;One interface, two implementations. Without the file implementation, CI needs a broker and every test becomes slow and flaky, and the streaming layer ends up as the untested corner of the platform.",2026-07-28 14:10:00;neha.chauhan;This is the difference between me being able to test the streaming path and not. Running the consumer against files in CI is exactly the same code path as against Redpanda.,2026-07-30 16:55:00;geetha.nallamada;Accepted.,,
+Story,PULSE-80,10080,Four correlated event topics and the producer,"As the platform
+I want a producer emitting correlated orders, payments, inventory and
+clickstream events
+So that the real-time layer can be built and tested against realistic traffic.
+
+Acceptance criteria
+* streaming/events.py defines the schemas with an explicit event_time
+* correlation is real - a payment event references an order event that exists,
+  an inventory movement follows a sale
+* configurable rate, and a burst mode for load testing
+* a replayable seeded mode producing an identical stream",,PULSE-7,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 11 (20 Jul - 31 Jul),Streaming,streaming;generator,2026-07-21 09:15:00,2026-07-31 15:30:00,2026-07-31 15:30:00,,"2026-07-24 15:40:00;devendranath.singam;Correlation matters as much here as in the batch generator. Uncorrelated events make the funnel and the payment success rate meaningless, and both are the metrics this layer exists to serve.","2026-07-31 15:25:00;divya.maram;Replay mode is what makes the KPI assertions possible - same seed, same stream, same numbers.",,,
+Task,PULSE-81,10081,Redpanda in docker-compose,"Add Redpanda to docker-compose so the Kafka path is exercised locally with the
+same code that will run deployed.
+
+Acceptance criteria
+* single-node Redpanda alongside Postgres
+* topics created on startup
+* documented switch between the file bus and the Kafka bus by environment
+  variable only",,PULSE-10,Done,Done,Medium,devendranath.singam,geetha.nallamada,3,Sprint 11 (20 Jul - 31 Jul),Platform;Streaming,docker;streaming,2026-07-21 09:20:00,2026-07-28 14:30:00,2026-07-28 14:30:00,,"2026-07-28 14:25:00;devendranath.singam;Redpanda rather than full Kafka for local - Kafka API compatible, one container, no ZooKeeper. The deployed target is Event Hubs, which speaks the same protocol.",,,,
+Story,PULSE-82,10082,Micro-batched consumer with offsets committed after write,"As the platform
+I want a consumer that commits offsets only after a successful write
+So that a crash loses no events.
+
+Acceptance criteria
+* micro-batches by count or time window, whichever comes first
+* offset committed only after the batch is written and the transaction commits
+* at-least-once delivery, with idempotent writes keyed on event id
+* a crash mid-batch is tested and reprocesses without duplicating",,PULSE-7,Done,Done,Medium,devendranath.singam,geetha.nallamada,8,Sprint 11 (20 Jul - 31 Jul),Streaming,streaming;consumer,2026-07-22 09:15:00,2026-07-31 16:40:00,2026-07-31 16:40:00,,2026-07-27 11:20:00;devendranath.singam;At-least-once with idempotent writes rather than chasing exactly-once. Exactly-once here would mean a distributed transaction across the broker and the warehouse for a KPI window that recomputes anyway.,"2026-07-30 15:10:00;neha.chauhan;Wrote the crash test - kill the consumer mid-batch, restart, assert no duplicates and no gaps. It passes, and it failed the first time against an earlier build where the commit came first, so the test is doing real work.",2026-07-31 16:35:00;geetha.nallamada;Accepted.,,
+Task,PULSE-83,10083,"Event-time windowing, not wall clock","All real-time KPI windows are computed on event_time carried in the event, not
+on the time the consumer processed it.
+
+Rationale: a replayed stream must reproduce exactly the KPIs it produced live.
+Wall-clock windowing makes the real-time layer untestable, because the answer
+depends on when you ran it.
+
+Acceptance criteria
+* every window derives from event_time
+* late-arriving events assigned to their true window within a stated
+  allowed-lateness bound, and counted when they fall outside it
+* a replay test asserts identical KPIs from an identical stream",,PULSE-7,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 11 (20 Jul - 31 Jul),Streaming,streaming;reproducibility,2026-07-22 09:20:00,2026-07-31 16:59:00,2026-07-31 16:59:00,,"2026-07-23 09:50:00;devendranath.singam;This is ADR-002 applied to the streaming layer. Same principle, same reason: anchor to the data, not to the clock.",2026-07-31 16:58:00;neha.chauhan;Replay test asserts identical KPI output across two runs of the same seeded stream. Green.,,,
+Story,PULSE-84,10084,ops.stream_events and ops.realtime_kpis,"As the platform
+I want landed stream events and a recomputed KPI window in the warehouse
+So that real-time metrics are queried the same way as batch metrics.
+
+Acceptance criteria
+* ops.stream_events as the landing table, with event id, type, event_time,
+  ingest time and payload
+* ops.realtime_kpis holding the current window, recomputed per micro-batch
+* every KPI defined in SQL, not in the consumer - see the epic
+* real-time revenue reconciles to batch revenue for a closed period",,PULSE-7,Done,Done,Medium,devendranath.singam,geetha.nallamada,5,Sprint 12 (03 Aug - 14 Aug),Streaming;Warehouse,streaming;ops,2026-08-03 09:20:00,2026-08-12 16:00:00,2026-08-12 16:00:00,,"2026-08-05 10:15:00;devendranath.singam;The consumer lands events and triggers a recompute. It does not know what revenue means, and it must not - that is the only way one definition survives two pipelines.",2026-08-12 15:55:00;geetha.nallamada;Reconciliation between the real-time window and the batch fact for a closed day is green. That check is the proof the two pipelines agree.,,,
+Bug,PULSE-85,10085,Batch rebuild silently wipes the streaming landing zone,"Observed: after a routine full warehouse rebuild, ops.stream_events was empty
+and the real-time dashboard showed zeros. No error anywhere.
+
+Impact: about four hours of landed events lost. In a deployed system this is a
+3am page and a hole in the record that nothing can reconstruct.
+
+Cause: ops tables were created alongside the bronze tables using DROP TABLE IF
+EXISTS followed by CREATE TABLE. The batch rebuild therefore dropped and
+recreated the streaming landing zone as a side effect.
+
+Fix
+* ops.* tables use CREATE TABLE IF NOT EXISTS and are never dropped by a
+  pipeline stage
+* ops DDL moved out of the bronze init path entirely
+* a test asserts that a full batch rebuild leaves ops.stream_events row counts
+  unchanged",,PULSE-7,Done,Done,Highest,devendranath.singam,divya.maram,5,Sprint 12 (03 Aug - 14 Aug),Streaming;ETL,data-loss;coupling,2026-08-06 09:40:00,2026-08-11 15:20:00,2026-08-11 15:20:00,,"2026-08-06 09:45:00;divya.maram;Real-time page was showing zeros this morning. I had run a full rebuild last night to pick up the new mart. Everything looked healthy - the rebuild succeeded, the quality suite passed, and four hours of events were simply gone.","2026-08-06 10:30:00;devendranath.singam;Found it. ops tables were being created in the same file as the bronze tables with DROP and CREATE. A batch job that can destroy the streaming layer is exactly the kind of coupling that causes a 3am page, and it has been sitting there since PULSE-22 in March.","2026-08-06 11:15:00;geetha.nallamada;This one goes in the retro properly. Both destructive DDL and cross-layer coupling, and neither the quality suite nor the test suite could see it because both only look at the warehouse after a successful build.","2026-08-06 14:20:00;neha.chauhan;This is the gap I flagged on my first week - nothing asserts that ops tables survive a rebuild (PULSE-86). Writing that test now, and it fails against the current main, which is what I wanted to confirm.","2026-08-11 15:15:00;devendranath.singam;Fixed. ops DDL is out of the bronze path, everything is IF NOT EXISTS, and Neha's test is green. Also grepped the whole repo for DROP TABLE - two other places, both in test teardown, both fine."
+Task,PULSE-86,10086,Test that a batch rebuild cannot destroy the ops schema,"Assert the isolation between the batch and streaming layers.
+
+Assertions
+* land events, run a full batch rebuild, assert ops.stream_events row count is
+  unchanged
+* same for ops.realtime_kpis, ops.pipeline_runs and ops.data_quality_results
+* no pipeline stage issues DROP against the ops schema, asserted by scanning
+  the DDL",,PULSE-11,Done,Done,Medium,neha.chauhan,geetha.nallamada,3,Sprint 12 (03 Aug - 14 Aug),Quality,testing;streaming,2026-08-06 14:25:00,2026-08-11 14:40:00,2026-08-11 14:40:00,,2026-08-07 10:20:00;neha.chauhan;The DDL scan is worth having alongside the behavioural test. The behavioural test catches it happening; the scan catches someone reintroducing the pattern in a file that is not yet wired in.,2026-08-11 14:35:00;devendranath.singam;Both green. Between this and the CURRENT_DATE scan we now have two structural assertions that catch a whole class of mistake rather than one instance of it.,,,
+Story,PULSE-87,10087,Real-time dashboard page,"As operations
+I want a live view of orders, payments, inventory movement and site activity
+So that a gateway degradation is visible within minutes rather than the next
+morning.
+
+Acceptance criteria
+* current-window KPIs: orders per minute, revenue rate, payment success rate,
+  active sessions
+* auto-refresh with the last update time and the window shown
+* payment success rate against its recent baseline, so a drop is legible
+* explicit indication when the stream is stale rather than showing an old
+  number as if it were current",,PULSE-7,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 12 (03 Aug - 14 Aug),Dashboards;Streaming,dashboard;streaming,2026-08-04 09:15:00,2026-08-14 16:30:00,2026-08-14 16:30:00,,"2026-08-10 11:30:00;divya.maram;The staleness indicator is the important part. A real-time dashboard silently showing a fifteen-minute-old number is worse than one that says the feed is down, because people act on it.",2026-08-13 14:15:00;neha.chauhan;Tested by stopping the producer. The page flags stale after the configured threshold and stops presenting the window as current.,2026-08-14 16:25:00;geetha.nallamada;Accepted. This closes the original problem statement - Friday evening gateway degradation is now visible in minutes.,,
+Story,PULSE-88,10088,Real-time API for non-dashboard consumers,"As another system
+I want to read current real-time KPIs over an API
+So that the dashboard is not the only way to consume them.
+
+Acceptance criteria
+* streaming/processors/realtime_api.py exposes the current window
+* reads ops.realtime_kpis - it does not recompute anything
+* window and last-update timestamp included in every response
+* stale window returns a clear staleness indicator rather than an old value",,PULSE-7,Done,Done,Medium,devendranath.singam,geetha.nallamada,3,Sprint 12 (03 Aug - 14 Aug),Streaming,streaming;api,2026-08-04 09:20:00,2026-08-13 15:40:00,2026-08-13 15:40:00,,"2026-08-13 15:35:00;devendranath.singam;Reads the same table the dashboard reads. A second consumer that recomputes is a second definition, and we have been strict about that everywhere else.",,,,
+Story,PULSE-89,10089,mart_funnel_payments,"As operations
+I want funnel conversion and payment performance in one mart
+So that drop-off and payment failure are analysed together.
+
+Acceptance criteria
+* 040_mart_funnel_payments.sql
+* funnel stages from session through view, cart, checkout to purchase
+* payment success rate on both denominators, labelled
+* failure reasons broken down by gateway and method",,PULSE-5,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 12 (03 Aug - 14 Aug),Warehouse,mart;funnel;payments,2026-08-05 09:15:00,2026-08-14 15:10:00,2026-08-14 15:10:00,,"2026-08-11 10:40:00;divya.maram;Both payment success denominators appear on the page with their labels, per PULSE-30. One number here would get quoted in the gateway negotiation and be the wrong one.",2026-08-14 15:05:00;geetha.nallamada;Accepted.,,,
+Story,PULSE-90,10090,mart_campaign_performance and mart_channel_performance,"As marketing
+I want campaign and channel performance with spend, revenue and ROAS
+So that budget conversations start from a shared table.
+
+Acceptance criteria
+* 037_mart_marketing.sql building both marts
+* spend, impressions, clicks, sessions, orders, revenue, ROAS, CPA
+* the attribution basis of every revenue column named in the column name
+  itself, not only in documentation
+* unattributed revenue shown as its own line rather than distributed",,PULSE-8,Done,Done,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 13 (17 Aug - 28 Aug),Warehouse,mart;marketing,2026-08-17 09:20:00,2026-08-26 16:00:00,2026-08-26 16:00:00,,"2026-08-19 10:30:00;geetha.nallamada;Attribution basis goes in the column name - revenue_last_touch, not revenue. A column called revenue in a marketing mart is a lie by omission, because it is always attributed somehow.","2026-08-21 14:20:00;divya.maram;Unattributed revenue as its own line, currently 34% of the total. Distributing it proportionally would have hidden the single most important caveat about this whole mart.",2026-08-26 15:55:00;geetha.nallamada;Accepted.,,
+Story,PULSE-91,10091,Publish five attribution models side by side,"As marketing
+I want the same revenue attributed five ways, presented together
+So that budget decisions account for the uncertainty rather than ignoring it.
+
+Models: first touch, last touch, linear, time decay, position based.
+
+Acceptance criteria
+* analytics/marketing/attribution.py computes all five over the same events
+* output is one table, one row per channel, one column per model
+* an upper_funnel_bias measure: first-touch credit minus last-touch credit,
+  which identifies channels that a last-touch budget will systematically
+  starve
+* no default model, and no blended number anywhere in the output",,PULSE-8,Done,Done,High,geetha.nallamada,geetha.nallamada,8,Sprint 13 (17 Aug - 28 Aug),Analytics,marketing;attribution,2026-08-17 09:25:00,2026-08-28 16:00:00,2026-08-28 16:00:00,,"2026-08-18 11:15:00;geetha.nallamada;No model here is correct. Publishing one would be a confident answer to a question we cannot answer, and it would immediately become the number - so we publish five and make the spread the finding.",2026-08-24 15:30:00;divya.maram;The spread is the finding. One influencer channel comes out at 1.8x ROAS on last touch and 6.1x on first touch. It has been having its budget cut for two quarters on the last-touch figure.,"2026-08-25 10:20:00;amit.shinde;Joined yesterday and this is the first thing I have been walked through. From the business side, the useful reframing is that the question is not which model is right - it is which channels the models disagree about, because those are the ones where the budget decision is actually a bet.",2026-08-25 11:05:00;geetha.nallamada;That is a better articulation than mine and I am putting it on the dashboard.,"2026-08-28 15:55:00;geetha.nallamada;Shipped. The upper_funnel_bias column makes the disagreement sortable, which turns a caveat into something actionable."
+Story,PULSE-92,10092,mart_acquisition_channel and LTV:CAC,"As marketing
+I want lifetime value against acquisition cost by channel
+So that acquisition spend is judged on what the customer becomes, not on the
+first order.
+
+Acceptance criteria
+* 039_mart_acquisition_channel.sql joining first-touch acquisition to CLV
+* LTV:CAC ratio per channel with the payback period
+* cohort-based realised value alongside the projection
+* the projection horizon stated wherever the ratio appears",,PULSE-8,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 13 (17 Aug - 28 Aug),Warehouse;Analytics,marketing;clv,2026-08-18 09:15:00,2026-08-27 15:40:00,2026-08-27 15:40:00,,2026-08-24 11:40:00;divya.maram;Two channels have a strong first-order ROAS and a poor LTV:CAC. That inversion is the argument for this mart existing separately from the campaign mart.,"2026-08-27 15:35:00;geetha.nallamada;Accepted, and it fed a concrete reallocation proposal rather than only a chart.",,,
+Story,PULSE-93,10093,Marketing dashboard page,"As marketing
+I want campaign, channel, attribution and acquisition economics on one page
+So that the budget conversation happens against one set of numbers.
+
+Acceptance criteria
+* campaign table with spend, revenue by named attribution model, ROAS, CPA
+* the five-model comparison as a grouped chart, fixed model order
+* LTV:CAC by channel with payback
+* every approximate number labelled where it appears, including the
+  incrementality proxy - see PULSE-94",,PULSE-8,Done,Done,Medium,divya.maram,geetha.nallamada,5,Sprint 13 (17 Aug - 28 Aug),Dashboards,dashboard;marketing,2026-08-18 09:20:00,2026-08-28 16:40:00,2026-08-28 16:40:00,,"2026-08-26 14:10:00;neha.chauhan;Checked every figure against the marts and every model column against attribution.py. All match. The model ordering is fixed, per the design system.",2026-08-28 16:35:00;geetha.nallamada;Accepted. This page closed the ROAS-of-4.2 question that opened the epic - the honest answer being that 4.2 was a blend of five different numbers between 1.8 and 6.1.,,,
+Task,PULSE-94,10094,Label the incrementality proxy where it appears,"The incrementality measure is a proxy. It cannot separate a campaign's effect
+from a seasonal upswing, and it is being used in budget conversations.
+
+Acceptance criteria
+* the limitation stated on the dashboard next to the number, not in a
+  tooltip and not only in documentation
+* the same wording in the KPI document
+* PULSE-122 raised for the geo holdout design that would replace it",,PULSE-8,Done,Done,Medium,geetha.nallamada,geetha.nallamada,2,Sprint 13 (17 Aug - 28 Aug),Dashboards;Docs,marketing;honesty,2026-08-19 09:15:00,2026-08-27 12:20:00,2026-08-27 12:20:00,,"2026-08-19 09:40:00;geetha.nallamada;Stating a limitation costs a line of text. Discovering it in a board meeting costs the platform's credibility, and that is very expensive to get back.","2026-08-26 10:15:00;amit.shinde;Second day and I would add: put it next to the number rather than in a footnote. In my experience the footnote does not survive the screenshot, and the screenshot is what reaches the decision.","2026-08-27 12:15:00;geetha.nallamada;Done, next to the number. Geo holdout raised as PULSE-122.",,
+Epic,PULSE-95,10095,Business Analysis and Stakeholder Enablement,"Cut when the BA role was approved, ahead of Amit joining on 24 Aug 2026.
+
+Scope: requirements traceability from the BRD through to marts and dashboard
+tiles, the stakeholder-facing KPI catalogue, UAT facilitation, and owning the
+backlog conversation with finance, marketing and operations.
+
+Why it exists late: for the first six months the analytics lead carried the
+stakeholder relationship directly. That stopped scaling at three consumer
+teams.",Business Analysis,,In Progress,,Medium,geetha.nallamada,geetha.nallamada,,Sprint 13 (17 Aug - 28 Aug),Docs,ba;stakeholders,2026-08-19 14:00:00,2026-08-19 14:00:00,,,2026-08-19 14:10:00;geetha.nallamada;Creating this now so there is a real backlog waiting on day one rather than two weeks of shadowing. Amit starts 24 Aug.,"2026-09-01 09:30:00;devendranath.singam;Access requests raised for Amit: Jira, Confluence, the dev warehouse read role and the Power BI workspace. Warehouse read is the slow one, it needs the data owner to approve.",,,
+Task,PULSE-96,10096,BA onboarding - Amit Shinde,"First week for the business analyst joining 24 Aug 2026.
+
+* environment access, warehouse read, Power BI workspace
+* walkthrough of the KPI contract, the medallion layers and the six ADRs
+* introductions to finance, marketing and operations stakeholders
+* first deliverable: a gap list between what stakeholders ask for and what the
+  platform currently answers",,PULSE-95,Done,Done,Medium,amit.shinde,geetha.nallamada,3,Sprint 13 (17 Aug - 28 Aug),Docs,onboarding,2026-08-24 09:30:00,2026-08-28 16:50:00,2026-08-28 16:50:00,,"2026-08-24 16:40:00;amit.shinde;Environment is up. Reading the KPI document first, because it looks like the closest thing this platform has to a requirements baseline - which is unusual and, from where I sit, a good sign.",2026-08-26 15:20:00;amit.shinde;Halfway through the stakeholder conversations. The consistent theme is that people trust the numbers and cannot always find them. That is a much better problem than the reverse and it points at discovery and documentation rather than modelling.,"2026-08-28 16:45:00;amit.shinde;Gap list written. Eleven asks, of which seven are already answerable by an existing mart that the asker did not know about, three need new work, and one is genuinely unanswerable today - revenue by the loyalty tier held at the time of purchase, which needs SCD2 change capture.",2026-08-28 16:54:00;geetha.nallamada;That last one is PULSE-119 and it has been in the backlog since May with exactly that justification. Good to have it confirmed by an actual stakeholder ask rather than by our own guess.,
+Story,PULSE-97,10097,Requirements traceability matrix,"As the team and its stakeholders
+I want each business requirement traced to its mart, metric definition,
+dashboard tile and test
+So that ""is this covered?"" is answerable without a meeting.
+
+Acceptance criteria
+* one row per requirement from the BRD
+* columns: KPI definition reference, implementing SQL, dashboard location,
+  covering test, status
+* gaps visible as empty cells rather than absent rows
+* published where stakeholders can read it",,PULSE-95,In Progress,,Medium,amit.shinde,geetha.nallamada,5,Sprint 14 (31 Aug - 11 Sep),Docs,ba;traceability,2026-08-25 09:20:00,2026-08-25 09:20:00,,,"2026-09-01 10:30:00;amit.shinde;Draft covers 34 of 41 requirements. The empty cells are the useful part - three requirements have a dashboard tile and no test, and one has a test and no definition, which is the more interesting way round.",2026-09-03 11:15:00;neha.chauhan;The three with a tile and no test are going into the analytics regression pack this sprint (PULSE-106).,"2026-09-07 14:40:00;amit.shinde;Seven left, all waiting on the operations page landing so I can point at a real tile rather than a planned one.",,
+Story,PULSE-98,10098,Demand forecasting with backtested baselines,"As purchasing
+I want a demand forecast I can order against
+So that stock decisions stop being made on gut feel.
+
+Acceptance criteria
+* analytics/forecasting/forecast.py implementing Holt-Winters, linear trend
+  and seasonal naive
+* model selected per series by backtest against a held-out tail, not by fit
+* MAPE and MAE reported per model per series, all models published
+* forecast intervals, not only point estimates",,PULSE-9,Done,Done,Medium,geetha.nallamada,geetha.nallamada,8,Sprint 14 (31 Aug - 11 Sep),Analytics,ml;forecasting,2026-08-31 09:20:00,2026-09-04 16:20:00,2026-09-04 16:20:00,,"2026-09-01 11:20:00;geetha.nallamada;First run was Holt-Winters alone with a MAPE of 12.4%, which reads as respectable until you have something to compare it against.","2026-09-02 10:15:00;divya.maram;Backtested against seasonal naive and the naive baseline wins on the daily series - 11.8%. Holt-Winters wins clearly on the weekly aggregate. So the honest answer is that it depends on the series, which is not the answer anyone wants and is the one we have.",2026-09-02 14:30:00;geetha.nallamada;That is exactly why the baseline gets published as a first-class result. Presenting Holt-Winters alone would have shipped a model that adds nothing at daily grain and nobody would have known.,"2026-09-04 16:15:00;geetha.nallamada;Merged. Per-series selection by backtest, all three models and their errors in the output.",
+Task,PULSE-99,10099,Report seasonal naive as a first-class result,"The naive baseline is published alongside every forecast, in the same table
+and on the same chart, with the same visual weight.
+
+Rationale: a model is only worth deploying if it beats ""next week looks like
+last week"", and that comparison must be visible rather than available on
+request. On the daily series the baseline currently wins.",,PULSE-9,Done,Done,Medium,geetha.nallamada,geetha.nallamada,2,Sprint 14 (31 Aug - 11 Sep),Analytics;Docs,ml;honesty,2026-09-02 14:35:00,2026-09-04 11:30:00,2026-09-04 11:30:00,,"2026-09-04 11:25:00;geetha.nallamada;Same visual weight, deliberately. A baseline rendered as a faint dashed line is a baseline that is being argued against rather than reported.",,,,
+Story,PULSE-100,10100,Churn propensity scoring,"As retention
+I want a churn propensity score per customer with the reasons behind it
+So that the team can write a campaign against a specific risk driver.
+
+Acceptance criteria
+* analytics/customer/churn.py, logistic regression
+* features computed from a snapshot rewound 90 days before the label window -
+  see PULSE-101
+* AUC, precision and recall on a held-out set, plus a lift chart
+* coefficients published as part of the deliverable",,PULSE-9,In Review,,Medium,divya.maram,geetha.nallamada,8,Sprint 14 (31 Aug - 11 Sep),Analytics,ml;churn,2026-08-31 09:25:00,2026-08-31 09:25:00,,,"2026-09-03 10:20:00;divya.maram;First model scored 0.94 AUC, which was the moment to be suspicious rather than pleased. See PULSE-101.","2026-09-07 15:20:00;divya.maram;Rebuilt with the rewound snapshot. 0.71 AUC, and the lift chart says the top decile contains about 3.4x the base churn rate, which is actionable. In review.","2026-09-08 09:45:00;geetha.nallamada;Reviewing today. The coefficients need to go in the output as part of the deliverable, not as an appendix - the retention team has to be able to say why a customer is on the list.",,
+Bug,PULSE-101,10101,Churn model scores 0.94 AUC - target leakage in the feature snapshot,"Observed: the first churn model reported 0.94 AUC on a held-out set.
+
+Diagnosis: leakage. Features were computed at the same moment as the label, so
+recency_days effectively was the label - a customer is labelled churned
+because they have not purchased recently, and the model was given exactly that
+as a feature.
+
+Impact: none published. Had it shipped, it would have scored beautifully and
+predicted nothing, and the retention team would have received a list of
+customers who had already left.
+
+Fix: rewind the feature snapshot 90 days before the label window, so features
+describe what was knowable at scoring time. Honest AUC is 0.71.",,PULSE-9,Done,Done,High,divya.maram,divya.maram,5,Sprint 14 (31 Aug - 11 Sep),Analytics,ml;leakage,2026-09-03 10:25:00,2026-09-07 15:10:00,2026-09-07 15:10:00,,"2026-09-03 10:35:00;divya.maram;Raising this against my own work. 0.94 on a churn model built in an afternoon is not a good sign, it is a symptom.",2026-09-03 11:40:00;geetha.nallamada;Correct instinct and worth saying plainly: a model that scores far better than the problem is hard is nearly always answering an easier question than the one you asked.,"2026-09-04 09:30:00;neha.chauhan;Adding a temporal validation assertion to the analytics pack - the maximum feature timestamp must be earlier than the label window start. It is mechanical, but this class of bug is subtle to spot and trivial to assert.",2026-09-07 15:05:00;divya.maram;Fixed with a 90-day rewind. 0.71 AUC and it actually predicts. Neha's assertion is in and passing.,
+Task,PULSE-102,10102,ADR-005: Linear churn model over gradient boosting,"Decision: use logistic regression for churn propensity, not the
+gradient-boosted model that scored slightly better.
+
+Rationale: the retention team has to know why a customer is at risk in order
+to write a campaign to them. A ranked list from a black box tells them who but
+not what to say. The coefficients are part of the deliverable.
+
+Measured cost: about 0.03 AUC.
+
+Revisit when: an action exists that needs only the ranking and not the reason.",,PULSE-9,In Progress,,Medium,geetha.nallamada,geetha.nallamada,1,Sprint 14 (31 Aug - 11 Sep),Docs,adr;decision;ml,2026-09-07 15:30:00,2026-09-07 15:30:00,,,"2026-09-08 10:10:00;geetha.nallamada;Writing this up now while the numbers are fresh. The revisit condition matters - this is a decision for the current use case, not a permanent position on model families.",,,,
+Story,PULSE-103,10103,Inventory optimisation,"As purchasing
+I want safety stock, reorder points, EOQ and an ABC-XYZ classification
+So that stock decisions have a defensible basis.
+
+Acceptance criteria
+* analytics/inventory/optimisation.py
+* safety stock from demand variability and lead time, at a stated service level
+* reorder point and economic order quantity per SKU
+* ABC by revenue contribution crossed with XYZ by demand variability
+* the service level is an input and is stated wherever the output is shown",,PULSE-9,To Do,,Medium,divya.maram,geetha.nallamada,8,Sprint 14 (31 Aug - 11 Sep),Analytics,ml;inventory,2026-08-31 09:30:00,2026-08-31 09:30:00,,,"2026-09-07 15:45:00;divya.maram;Not started - churn took the sprint. It depends on the forecast output, which landed on Friday, so it is unblocked now.",,,,
+Story,PULSE-104,10104,Product affinity with lift,"As merchandising
+I want product affinity rules that account for base rates
+So that recommendations are not just a list of popular products.
+
+Acceptance criteria
+* analytics/sales/basket.py at line grain from fact_sales
+* support, confidence and lift, with lift as the headline measure
+* minimum support threshold stated and configurable
+* rules below a lift of 1.0 shown as such rather than filtered away",,PULSE-9,To Do,,Medium,geetha.nallamada,geetha.nallamada,5,Sprint 14 (31 Aug - 11 Sep),Analytics,ml;basket,2026-08-31 09:35:00,2026-08-31 09:35:00,,,"2026-09-08 09:20:00;geetha.nallamada;Lift rather than confidence as the headline. High confidence on a popular product tells you the product is popular, which merchandising already knows.",,,,
+Story,PULSE-105,10105,Operations dashboard page,"As operations
+I want inventory health, fulfilment and funnel performance on one page
+So that operational issues are visible without a request.
+
+Acceptance criteria
+* stock health: below reorder point, overstock, ABC-XYZ distribution
+* funnel conversion by stage with drop-off
+* payment success by gateway, both denominators labelled
+* returns and cancellations by reason",,PULSE-5,To Do,,Medium,divya.maram,geetha.nallamada,5,Sprint 14 (31 Aug - 11 Sep),Dashboards,dashboard;operations,2026-09-01 09:15:00,2026-09-01 09:15:00,,,2026-09-07 14:50:00;amit.shinde;Flagging a dependency from my side - seven traceability rows (PULSE-97) are waiting on this page to point at a real tile.,2026-09-08 09:30:00;divya.maram;Understood. It is behind PULSE-103 because the stock health section needs the reorder points.,,,
+Task,PULSE-106,10106,Regression pack for the analytics layer,"Regression coverage for forecasting, churn, inventory and basket.
+
+Assertions
+* forecast output has one row per series per horizon step, no gaps
+* every model reports its backtest error, including the naive baseline
+* churn feature snapshot maximum timestamp precedes the label window start
+* churn coefficients present in the output
+* basket lift computed against the correct base rate on a hand-worked example
+* the three traceability rows with a tile and no test are covered",,PULSE-11,In Progress,,Medium,neha.chauhan,geetha.nallamada,5,Sprint 14 (31 Aug - 11 Sep),Quality;Analytics,testing;ml,2026-09-01 09:20:00,2026-09-01 09:20:00,,,2026-09-04 09:35:00;neha.chauhan;Temporal validation assertion is in and passing after the PULSE-101 fix. Forecast completeness is in. Basket assertions are blocked until PULSE-104 lands.,2026-09-08 10:30:00;neha.chauhan;Hand-worked the basket lift example against a small fixture so the assertion is checking arithmetic I have verified by hand rather than the implementation against itself.,,,
+Story,PULSE-107,10107,Terraform for the Azure footprint,"As the team
+I want the whole environment described as code
+So that a shared environment exists and can be rebuilt.
+
+Scope: ADLS Gen2, Event Hubs, Azure Database for PostgreSQL Flexible Server,
+Container Registry, Key Vault, Container Apps, Databricks workspace.
+
+Acceptance criteria
+* infrastructure/terraform/ with a module per concern
+* dev, test and prod tfvars, differing only in sizing
+* no secrets in state or in tfvars - Key Vault references throughout
+* terraform plan clean and apply verified in dev",,PULSE-10,In Progress,,Medium,devendranath.singam,geetha.nallamada,13,Sprint 14 (31 Aug - 11 Sep),Platform,terraform;infrastructure,2026-08-31 09:40:00,2026-08-31 09:40:00,,,"2026-09-02 15:10:00;devendranath.singam;Modules per concern rather than one root. Storage, streaming, warehouse and registry are separately reviewable and separately destroyable, which matters for the ephemeral environments.","2026-09-04 16:10:00;devendranath.singam;Apply is green in dev. Databricks workspace is provisioned but nothing runs on it yet - it is there for the migration path, not for today's workload.","2026-09-08 11:15:00;devendranath.singam;Test tfvars remaining, then this is done. Cost work is PULSE-108 and it changed several of the defaults.",,
+Task,PULSE-108,10108,Cost estimate and cheapest-working-defaults pass,"Produce a printed monthly cost estimate per environment and bring dev down to
+something defensible.
+
+First draft defaulted to provisioned SQL and premium Databricks: roughly
+GBP 600/month for a dev environment that nobody uses at night.
+
+Changes
+* serverless PostgreSQL with auto-pause on dev
+* Container Apps scaled to zero on dev
+* Databricks on the smallest cluster with aggressive auto-termination
+* lifecycle rules moving ADLS data to cool storage after 30 days
+
+Target: dev at roughly GBP 30/month, with the estimate committed alongside the
+Terraform so the number is reviewable.",,PULSE-10,In Progress,,Medium,devendranath.singam,geetha.nallamada,3,Sprint 14 (31 Aug - 11 Sep),Platform,cost;infrastructure,2026-09-02 09:15:00,2026-09-02 09:15:00,,,"2026-09-02 09:40:00;devendranath.singam;GBP 600 a month for a dev environment is how a platform gets switched off by finance in month three. Cheapest working defaults, and the estimate lives next to the code so a change that increases it is visible in the diff.","2026-09-08 11:20:00;devendranath.singam;Dev is at about GBP 31 with auto-pause and scale-to-zero. Prod sizing is still being worked through - the tradeoff there is auto-pause cold starts against always-on cost, and that is a conversation with the business rather than a technical call.",,,
+Task,PULSE-109,10109,ADR-006: Managed PostgreSQL over Synapse,"Decision: Azure Database for PostgreSQL Flexible Server as the warehouse
+engine, not Synapse.
+
+Rationale: Synapse is the right answer past roughly a terabyte. Below that it
+is a large bill for a warehouse that a single well-indexed relational database
+serves faster. Current gold layer is under 40GB at the largest preset.
+
+Migration path kept open: the gold layer is already a star schema, so moving
+to a distributed engine is a DDL change and a bulk copy rather than a
+remodelling exercise. A real path, kept open, not taken prematurely.
+
+Revisit when: gold exceeds roughly 500GB, or concurrent query load degrades
+p95 dashboard latency beyond 3s.",,PULSE-10,Done,Done,Medium,devendranath.singam,geetha.nallamada,1,Sprint 14 (31 Aug - 11 Sep),Docs,adr;decision;infrastructure,2026-09-01 10:00:00,2026-09-04 12:00:00,2026-09-04 12:00:00,,2026-09-03 10:40:00;geetha.nallamada;The revisit trigger with actual numbers is what makes this ADR useful rather than a defence of a past choice. Without it the conversation reopens every quarter on vibes.,2026-09-04 11:55:00;devendranath.singam;Written up with both triggers. Databricks stays provisioned for the ML workloads and as the migration landing spot.,,,
+Story,PULSE-110,10110,Power BI dataset export and the DAX model as text,"As a stakeholder who lives in Power BI
+I want the gold model available in Power BI with the same definitions
+So that I am not asked to change tools to get the agreed numbers.
+
+Acceptance criteria
+* dashboards/powerbi/export_for_powerbi.py exports the model to a documented
+  location
+* the DAX measure library committed as text, one measure per KPI definition
+* every measure references the KPI document
+* a reconciliation check comparing DAX output against the SQL implementation
+  for the headline measures",,PULSE-5,To Do,,Medium,geetha.nallamada,geetha.nallamada,8,Sprint 15 (14 Sep - 25 Sep),Dashboards,powerbi;reporting,2026-09-03 09:20:00,2026-09-03 09:20:00,,,"2026-09-03 09:50:00;geetha.nallamada;This is the fourth implementation of the same metric definitions - SQL, Python, the real-time window and now DAX. That is the point at which a semantic layer starts paying for itself, which is PULSE-123.","2026-09-07 11:30:00;amit.shinde;Two of my stakeholder groups work entirely in Power BI. Their concern is not the tooling, it is whether the numbers will match the Streamlit pages - so the reconciliation check is the part of this story that actually matters to them.",,,
+Task,PULSE-111,10111,Keep .pbix out of git,"Establish and enforce that no .pbix binary is committed.
+
+Rationale: a binary that cannot be diffed, reviewed or merged does not belong
+in version control, and one that is three commits stale is worse than none at
+all - people open it and trust it.
+
+Acceptance criteria
+* .gitignore excludes *.pbix
+* a CI check fails the build if one is added
+* the DAX library and the export script are the reviewable artefacts
+* the reasoning documented for whoever tries to commit one next",,PULSE-5,To Do,,Medium,geetha.nallamada,geetha.nallamada,1,Sprint 15 (14 Sep - 25 Sep),Dashboards;CI,powerbi;governance,2026-09-03 09:25:00,2026-09-03 09:25:00,,,2026-09-07 10:20:00;devendranath.singam;Making it a CI check rather than a convention. Conventions about binaries lose to convenience roughly every time.,,,,
+Story,PULSE-112,10112,Health check and demo scripts,"As an operator
+I want one command that tells me whether the platform is healthy
+So that a new environment can be verified without tribal knowledge.
+
+Acceptance criteria
+* scripts/healthcheck.py verifies database connectivity, expected schemas and
+  tables, last successful pipeline run, last quality suite result and stream
+  freshness
+* non-zero exit on failure, with the failing check named
+* scripts/run_demo.py builds a warehouse and starts the dashboards from a
+  clean checkout in one command",,PULSE-10,To Do,,Medium,devendranath.singam,geetha.nallamada,5,Sprint 15 (14 Sep - 25 Sep),Platform,ops;scripts,2026-09-04 09:15:00,2026-09-04 09:15:00,,,"2026-09-07 16:20:00;neha.chauhan;I would like the health check to be the first thing UAT runs (PULSE-115). If it is red, nothing after it is worth investigating.",,,,
+Story,PULSE-113,10113,Application and infrastructure deployment workflows,"As the team
+I want deployment as a reviewed, repeatable workflow
+So that deploying is not a person following notes.
+
+Acceptance criteria
+* .github/workflows/deploy-infrastructure.yml - plan on PR, apply on merge
+  with an environment approval gate
+* .github/workflows/deploy-application.yml - build, push to ACR, deploy to
+  Container Apps
+* a shared reusable workflow for per-environment differences
+* rollback documented and exercised once",,PULSE-10,To Do,,Medium,devendranath.singam,geetha.nallamada,8,Sprint 15 (14 Sep - 25 Sep),CI;Platform,ci;deployment,2026-09-04 09:20:00,2026-09-04 09:20:00,,,"2026-09-08 11:25:00;devendranath.singam;Rollback exercised once before this is called done. An untested rollback is a plan, not a capability, and the difference shows up at the worst possible moment.",,,,
+Task,PULSE-114,10114,Ephemeral environment teardown workflow,"A destroy workflow so review environments do not accumulate cost.
+
+Acceptance criteria
+* .github/workflows/destroy-environment.yml, manually triggered with an
+  explicit environment name and a typed confirmation
+* refuses to run against prod under any input
+* the same modules as the create path, so drift is impossible",,PULSE-10,To Do,,Medium,devendranath.singam,geetha.nallamada,3,Sprint 15 (14 Sep - 25 Sep),CI;Platform,ci;cost,2026-09-04 09:25:00,2026-09-04 09:25:00,,,"2026-09-07 15:50:00;devendranath.singam;Hard refusal on prod as a guard in the workflow itself, not as a note in the description. This is the one workflow where a mistake is unrecoverable.",,,,
+Story,PULSE-115,10115,UAT pack and stakeholder sign-off process,"As the business
+I want a structured UAT pass before anything is called done
+So that acceptance is a decision rather than an assumption.
+
+Acceptance criteria
+* scripted scenarios per stakeholder group, in business language
+* expected results derived from the KPI definitions, not from the dashboards
+* a defect log with severity and a defined path back into the backlog
+* written sign-off per group, recorded against the traceability matrix",,PULSE-11,To Do,,Medium,neha.chauhan,geetha.nallamada,5,Sprint 15 (14 Sep - 25 Sep),Quality;Docs,uat;testing,2026-09-04 09:30:00,2026-09-04 09:30:00,,,"2026-09-07 16:10:00;neha.chauhan;Expected results come from the KPI document rather than from the current dashboard output. Deriving them from the dashboard tests that the dashboard agrees with itself, which it always will.",2026-09-08 10:45:00;amit.shinde;I will facilitate the sessions and take the sign-offs into the traceability matrix. Finance and marketing first - they have the most at stake in the definitions.,,,
+Story,PULSE-116,10116,Stakeholder KPI catalogue,"As a stakeholder
+I want a plain-language catalogue of every available metric and where to find
+it
+So that I stop asking for numbers that already exist.
+
+Acceptance criteria
+* every metric in business language with its plain definition, where to see it
+  and its known limitations
+* derived from docs/kpi-definitions.md rather than restating it, so the two
+  cannot drift
+* organised by business question, not by warehouse layer
+
+Justification: seven of the eleven gaps in PULSE-96 turned out to be things
+the platform already answers.",,PULSE-95,To Do,,Medium,amit.shinde,geetha.nallamada,5,Sprint 15 (14 Sep - 25 Sep),Docs,ba;documentation,2026-09-07 09:20:00,2026-09-07 09:20:00,,,2026-09-07 09:45:00;amit.shinde;Organised by the question a stakeholder is actually asking rather than by mart. Nobody outside the team knows they want mart_customer_360 - they know they want to understand who stopped buying.,"2026-09-08 09:15:00;geetha.nallamada;Strongly agree, and it must generate from the KPI document rather than restate it. Two documents that drift apart are worse than one that is hard to read.",,,
+Story,PULSE-117,10117,Wrap the pipeline in a real orchestrator,"Replace hand-rolled sequencing in etl/pipeline.py with Dagster or Databricks
+Jobs.
+
+Why it has waited: the pipeline is a linear DAG of six stages on one schedule.
+Hand-rolled orchestration has been sufficient and an orchestrator would have
+been complexity without a problem.
+
+Trigger to do it: the moment there are two schedules with a dependency between
+them.
+
+Why it will be cheap when we do: the stage boundaries and ops.pipeline_runs
+are already shaped for it. This is a wrapper, not a rewrite.",,PULSE-10,To Do,,Medium,devendranath.singam,geetha.nallamada,8,,ETL;Platform,backlog;orchestration,2026-04-09 16:15:00,2026-04-09 16:15:00,,,"2026-04-09 16:20:00;devendranath.singam;Raising this at the point of deciding not to do it, with the trigger condition written down. Otherwise it becomes a recurring conversation with no memory.",2026-09-01 14:30:00;geetha.nallamada;Still one schedule. Not yet.,,,
+Story,PULSE-118,10118,Incremental loads,"Move from full rebuild to incremental loading using ops.load_watermarks.
+
+Why it has waited: a full rebuild takes eleven seconds on the demo dataset and
+about four minutes on the largest preset. Incremental buys nothing yet and
+would have added ""which rows changed"" bugs to a pipeline that had plenty to
+prove already.
+
+Trigger: full rebuild exceeding the nightly window, or a business need for
+intraday batch refresh.
+
+Groundwork already in place: ops.load_watermarks exists and is populated.",,PULSE-1,To Do,,Medium,devendranath.singam,geetha.nallamada,8,,ETL,backlog;performance,2026-05-06 10:30:00,2026-05-06 10:30:00,,,"2026-05-06 10:40:00;devendranath.singam;Watermark table is in and being written to, so the data will be there when we need it. Reading it is the part we are deferring.",,,,
+Story,PULSE-119,10119,Real change capture for SCD Type 2,"Wire genuine change capture into dim_customer_history so that tier, segment
+and address changes are versioned.
+
+Why it has waited: the source ships no change history, so there is nothing to
+capture. Solving it means either CDC on the source system or a daily
+comparison snapshot, and both are conversations with the owning team.
+
+What it unlocks: ""revenue by the loyalty tier the customer held at the time of
+purchase"", which is currently unanswerable and has been asked for by finance.
+
+Confirmed as a real stakeholder ask in PULSE-96.",,PULSE-4,To Do,,Medium,geetha.nallamada,geetha.nallamada,13,,Warehouse,backlog;scd2,2026-06-05 15:25:00,2026-06-05 15:25:00,,,"2026-06-05 15:30:00;geetha.nallamada;Raising it now, while building the Type 2 shape, so the reason the history is not real is recorded next to the table that looks like it should have it.","2026-08-28 16:55:00;amit.shinde;Confirmed as a live finance ask during my onboarding gap analysis. Moving it up would need the source team, so it is a scheduling problem more than a technical one.",,,
+Story,PULSE-120,10120,Alerting with a named owner,"Route quality failures and pipeline errors to a person who is expected to
+respond.
+
+Why it has waited: Terraform creates the action group; nothing routes to it,
+because routing to a rota that does not exist is worse than not alerting.
+An alert with no owner trains people to ignore alerts.
+
+This is an organisational change first and a technical one second. What is
+needed: an agreed rota, an agreed response expectation, and an agreed
+definition of what is worth waking someone for.
+
+Technical work once that exists: roughly two days.",,PULSE-3,To Do,,Medium,devendranath.singam,geetha.nallamada,3,,Platform;Quality,backlog;alerting;blocked,2026-04-15 09:55:00,2026-04-15 09:55:00,,,"2026-04-15 10:00:00;geetha.nallamada;Explicitly deferred rather than dropped, and written down so it stays visible instead of becoming folklore.",2026-08-12 09:30:00;devendranath.singam;Now that the streaming layer is live this matters more than it did in April. A stalled consumer is currently discovered by someone opening the dashboard.,"2026-09-08 11:30:00;devendranath.singam;Still blocked on the rota, not on the work. Flagging it for the quarterly review with a note that it is the largest operational gap we have.",,
+Story,PULSE-121,10121,Drift detection and data profiling,"Detect data that is structurally valid and quietly different: a category
+disappearing, a distribution shifting, cardinality doubling.
+
+Why it has waited: the quality suite catches broken data, which was the more
+urgent problem. Drift is the subtler one and needs a history to compare
+against.
+
+The history now exists - ops.data_quality_results has been appending since
+April, so there is a real baseline to build on rather than a cold start.",,PULSE-3,To Do,,Medium,divya.maram,geetha.nallamada,8,,Quality,backlog;quality;drift,2026-04-23 11:45:00,2026-04-23 11:45:00,,,"2026-04-23 11:50:00;geetha.nallamada;Raising it while building the history table, since the history is the prerequisite and it would be irritating to want this in six months and have nothing to compare against.","2026-09-04 10:15:00;neha.chauhan;Five months of history now. This is the highest-value thing left in the quality epic from where I sit - every bug we have found this year was structural, and drift is the class we currently cannot see at all.",,,
+Story,PULSE-122,10122,Geo holdout to replace the incrementality proxy,"Replace the incrementality proxy with a geo holdout or matched-market design.
+
+Why it matters: the proxy is the weakest number in the platform and it is used
+to argue about budget. It cannot separate a campaign's effect from a seasonal
+upswing, and it is labelled as such on the dashboard.
+
+Why it has waited: it needs marketing to agree to withhold spend in selected
+markets. That is a commercial conversation, not a sprint.",,PULSE-8,To Do,,Medium,amit.shinde,geetha.nallamada,13,,Analytics,backlog;marketing;experimentation,2026-08-27 12:25:00,2026-08-27 12:25:00,,,"2026-08-27 12:30:00;geetha.nallamada;Raised alongside labelling the proxy, so the honest caveat comes with a route to removing it rather than being a permanent apology.",2026-09-07 14:20:00;amit.shinde;Taking this one - it is mostly a stakeholder negotiation. Withholding spend in two matched regions for six weeks is a real cost and marketing will need the case made properly. I would rather bring them a designed experiment than an ask.,,,
+Story,PULSE-123,10123,Semantic layer to collapse the metric implementations,"Collapse the metric implementations into one definition consumed by every
+tool.
+
+Current state: definitions live in one document and four implementations -
+SQL marts, Python analytics, the real-time KPI window, and DAX. The
+reconciliation checks keep the SQL side honest; the DAX side is verified by
+hand.
+
+Why it has waited: with three consumers the reconciliation checks were
+sufficient. The DAX library (PULSE-110) makes it four, and hand verification
+does not scale past that.
+
+Trigger: a fifth consumer, or the first DAX-versus-SQL discrepancy that
+reaches a stakeholder.",,PULSE-2,To Do,,Medium,geetha.nallamada,geetha.nallamada,13,,Warehouse;Docs,backlog;semantic-layer,2026-09-03 09:55:00,2026-09-03 09:55:00,,,"2026-09-03 10:00:00;geetha.nallamada;Worth doing when a fourth consumer appears, and PULSE-110 is the fourth. Raising it now rather than after the first discrepancy.","2026-09-08 09:50:00;amit.shinde;From the stakeholder side the risk is specific: the moment a Power BI number disagrees with a Streamlit number in a meeting, the argument stops being about the business and becomes about the platform. That is expensive to recover from.",,,

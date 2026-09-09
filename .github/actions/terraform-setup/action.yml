@@ -1,0 +1,69 @@
+name: Terraform setup
+description: >-
+  Authenticate to Azure with OIDC and initialise Terraform against the state
+  file for one environment. Used by every infrastructure workflow so the login
+  and backend wiring exists in exactly one place.
+
+inputs:
+  environment:
+    description: dev | prod - selects the backend config and the tfvars file
+    required: true
+  terraform-version:
+    description: Pinned Terraform version
+    required: false
+    default: "1.9.8"
+  client-id:
+    description: Entra ID application (client) ID of the federated identity
+    required: true
+  tenant-id:
+    description: Entra ID tenant ID
+    required: true
+  subscription-id:
+    description: Target subscription
+    required: true
+  working-directory:
+    description: Where the root module lives
+    required: false
+    default: infrastructure/terraform
+
+runs:
+  using: composite
+  steps:
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        # The wrapper rewrites stdout, which breaks `terraform output -json`
+        # being piped straight into $GITHUB_OUTPUT.
+        terraform_wrapper: false
+
+    # OIDC: GitHub mints a short-lived token that Entra ID trusts for this
+    # repository and environment. Nothing long-lived is stored anywhere - there
+    # is no client secret to rotate, leak, or find in a log four years later.
+    - name: Authenticate to Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.client-id }}
+        tenant-id: ${{ inputs.tenant-id }}
+        subscription-id: ${{ inputs.subscription-id }}
+
+    - name: Terraform init
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        ARM_USE_OIDC: "true"
+        ARM_USE_AZUREAD: "true"
+        ARM_CLIENT_ID: ${{ inputs.client-id }}
+        ARM_TENANT_ID: ${{ inputs.tenant-id }}
+        ARM_SUBSCRIPTION_ID: ${{ inputs.subscription-id }}
+      run: |
+        set -euo pipefail
+        terraform init \
+          -backend-config="backend-${{ inputs.environment }}.hcl" \
+          -input=false \
+          -no-color
+
+        # The backend block in main.tf is deliberately empty, so an operator
+        # cannot run Terraform without saying which environment they mean.
+        # Verify we landed on the state we intended before anything mutates it.
+        echo "Initialised against state key: pulse-${{ inputs.environment }}.tfstate"

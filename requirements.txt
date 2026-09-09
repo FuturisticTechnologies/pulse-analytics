@@ -1,0 +1,21 @@
+# Core runtime - everything the local demo needs.
+pandas>=2.1
+numpy>=1.26
+duckdb>=0.10
+pyarrow>=14.0
+python-dotenv>=1.0
+PyYAML>=6.0
+
+# Dashboards
+streamlit>=1.62
+plotly>=5.18
+
+# Real-time API surface
+fastapi>=0.109
+uvicorn>=0.27
+
+# Markdown report rendering
+tabulate>=0.9
+
+# Tests
+pytest>=7.4

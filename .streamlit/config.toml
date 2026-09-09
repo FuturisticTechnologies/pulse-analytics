@@ -1,0 +1,15 @@
+# Streamlit theme aligned with dashboards/streamlit/theme.py so the app plane,
+# the chart surface and the tiles are one continuous design rather than three.
+[theme]
+base = "light"
+primaryColor = "#2a78d6"
+backgroundColor = "#f9f9f7"
+secondaryBackgroundColor = "#fcfcfb"
+textColor = "#0b0b0b"
+font = "sans serif"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

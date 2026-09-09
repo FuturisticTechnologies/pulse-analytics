@@ -1,0 +1,319 @@
+name: Deploy application to one environment
+
+# Reusable. Called by deploy-application.yml once for dev and once for prod, so
+# the two environments run byte-for-byte the same deployment steps and cannot
+# drift apart. Everything that differs between them is an input.
+#
+# The sequence, and why it is this order:
+#
+#   1. resolve   read the Terraform outputs - names come from state, never from
+#                a naming convention that breaks silently when someone renames
+#   2. promote   for prod, `az acr import` the EXACT image dev ran. Rebuilding
+#                for prod would deploy an artefact nothing tested
+#   3. migrate   create schemas before the new image starts, so a container
+#                never boots against a database it cannot read
+#   4. deploy    terraform apply -var image_tag=... - the image rolls out
+#                through Terraform, so state stays truthful
+#   5. verify    poll /health until the new revision actually serves traffic
+#
+# Step 5 is the one that makes the rest worth having: without it the pipeline
+# reports green when the revision failed to start.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: dev | prod
+        required: true
+        type: string
+      image_tag:
+        description: Image tag to deploy (a git SHA)
+        required: true
+        type: string
+      source_environment:
+        description: >-
+          Environment to promote the image FROM. Empty means the image is
+          already in this environment's registry (the dev path).
+        required: false
+        type: string
+        default: ""
+      run_migrations:
+        description: Create/refresh the warehouse schemas before deploying
+        required: false
+        type: boolean
+        default: true
+      terraform_version:
+        required: false
+        type: string
+        default: "1.9.8"
+    outputs:
+      dashboard_url:
+        description: Public URL of the deployed dashboard
+        value: ${{ jobs.deploy.outputs.dashboard_url }}
+      api_url:
+        description: Public URL of the deployed API
+        value: ${{ jobs.deploy.outputs.api_url }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.outputs.outputs.dashboard_url }}
+
+    outputs:
+      dashboard_url: ${{ steps.outputs.outputs.dashboard_url }}
+      api_url: ${{ steps.outputs.outputs.api_url }}
+
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_USE_AZUREAD: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/terraform-setup
+        with:
+          environment: ${{ inputs.environment }}
+          terraform-version: ${{ inputs.terraform_version }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # -----------------------------------------------------------------------
+      - name: Resolve the target from Terraform state
+        id: tf
+        working-directory: infrastructure/terraform
+        run: |
+          set -euo pipefail
+
+          # Terraform state is the single source of truth for what exists.
+          # Deriving `rg-pulse-dev-uks` by convention works right up until
+          # someone changes the naming scheme, and then deploys into nothing.
+          outputs=$(terraform output -json)
+
+          get() { echo "$outputs" | jq -r --arg k "$1" '.[$k].value // empty'; }
+
+          {
+            echo "resource_group=$(get resource_group_name)"
+            echo "registry_name=$(get registry_name)"
+            echo "login_server=$(get registry_login_server)"
+            echo "image_repository=$(get image_repository)"
+            echo "postgres_server=$(get postgres_server_name)"
+            echo "postgres_fqdn=$(get postgres_fqdn)"
+            echo "postgres_db=$(get postgres_database)"
+            echo "postgres_user=$(get postgres_admin_username)"
+          } >> "$GITHUB_OUTPUT"
+
+          # An environment mismatch here means the backend config and the tfvars
+          # disagree, and the deploy is about to hit the wrong estate.
+          state_env=$(get environment)
+          if [ "$state_env" != "${{ inputs.environment }}" ]; then
+            echo "::error::state describes '$state_env' but this job targets '${{ inputs.environment }}'"
+            exit 1
+          fi
+
+      # -----------------------------------------------------------------------
+      # Promotion. Copies the exact manifest between registries - no rebuild, so
+      # prod runs the identical bytes dev was verified on.
+      # -----------------------------------------------------------------------
+      - name: Promote the image from ${{ inputs.source_environment }}
+        if: inputs.source_environment != ''
+        env:
+          SOURCE_REGISTRY: ${{ vars.SOURCE_REGISTRY_LOGIN_SERVER }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SOURCE_REGISTRY:-}" ]; then
+            echo "::error::SOURCE_REGISTRY_LOGIN_SERVER is not set on the ${{ inputs.environment }} environment"
+            exit 1
+          fi
+
+          source_image="${SOURCE_REGISTRY}/${{ steps.tf.outputs.image_repository }}:${{ inputs.image_tag }}"
+          echo "Importing $source_image into ${{ steps.tf.outputs.registry_name }}"
+
+          az acr import \
+            --name "${{ steps.tf.outputs.registry_name }}" \
+            --source "$source_image" \
+            --image "${{ steps.tf.outputs.image_repository }}:${{ inputs.image_tag }}" \
+            --force
+
+      - name: Confirm the image exists in the target registry
+        run: |
+          set -euo pipefail
+          # Fail here, before the migration, rather than after Terraform has
+          # pointed the container apps at a tag that cannot be pulled.
+          if ! az acr manifest show-metadata \
+                --registry "${{ steps.tf.outputs.registry_name }}" \
+                --name "${{ steps.tf.outputs.image_repository }}:${{ inputs.image_tag }}" \
+                --output none 2>/dev/null; then
+            echo "::error::${{ steps.tf.outputs.image_repository }}:${{ inputs.image_tag }} not found in ${{ steps.tf.outputs.registry_name }}"
+            exit 1
+          fi
+          echo "Image is present."
+
+      # -----------------------------------------------------------------------
+      # Migrations. The database firewall denies by default, so the runner opens
+      # a hole for its own IP, runs, and closes it again - including on failure.
+      # -----------------------------------------------------------------------
+      - name: Open the database firewall for this runner
+        if: inputs.run_migrations
+        id: firewall
+        run: |
+          set -euo pipefail
+          runner_ip=$(curl -fsS --retry 3 https://api.ipify.org)
+          rule="gh-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "rule=$rule" >> "$GITHUB_OUTPUT"
+          echo "Opening ${{ steps.tf.outputs.postgres_server }} to $runner_ip as $rule"
+
+          az postgres flexible-server firewall-rule create \
+            --resource-group "${{ steps.tf.outputs.resource_group }}" \
+            --name "${{ steps.tf.outputs.postgres_server }}" \
+            --rule-name "$rule" \
+            --start-ip-address "$runner_ip" \
+            --end-ip-address "$runner_ip" \
+            --output none
+
+      - uses: actions/setup-python@v5
+        if: inputs.run_migrations
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install the platform
+        if: inputs.run_migrations
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-optional.txt
+
+      - name: Create schemas and ops tables
+        if: inputs.run_migrations
+        env:
+          PULSE_DB_ENGINE: postgres
+          POSTGRES_HOST: ${{ steps.tf.outputs.postgres_fqdn }}
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: ${{ steps.tf.outputs.postgres_db }}
+          POSTGRES_USER: ${{ steps.tf.outputs.postgres_user }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+          POSTGRES_SSLMODE: require
+          PULSE_LOG_LEVEL: INFO
+        run: |
+          set -euo pipefail
+          # --stage init only. It is idempotent: bronze is DROP+CREATE, and the
+          # ops tables are CREATE TABLE IF NOT EXISTS, so re-running a deploy
+          # does not erase the run log or the streaming landing zone.
+          #
+          # Loading data is a scheduled job, not a deployment step - a deploy
+          # that also reloads the warehouse cannot be rolled back quickly.
+          python -m etl.pipeline --stage init
+
+      - name: Close the database firewall
+        # always(): the hole must close even when the migration failed, or a
+        # failed deploy quietly leaves the database open to a recycled IP.
+        if: always() && inputs.run_migrations && steps.firewall.outputs.rule != ''
+        run: |
+          az postgres flexible-server firewall-rule delete \
+            --resource-group "${{ steps.tf.outputs.resource_group }}" \
+            --name "${{ steps.tf.outputs.postgres_server }}" \
+            --rule-name "${{ steps.firewall.outputs.rule }}" \
+            --yes --output none || echo "::warning::could not remove firewall rule ${{ steps.firewall.outputs.rule }}"
+
+      # -----------------------------------------------------------------------
+      # Roll the image out through Terraform, so state matches reality. An
+      # `az containerapp update --image` would deploy faster and leave Terraform
+      # believing the old tag is running - and the next apply would roll it back.
+      # -----------------------------------------------------------------------
+      - name: Deploy the image
+        working-directory: infrastructure/terraform
+        env:
+          TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_db_admin_password: ${{ secrets.DB_ADMIN_PASSWORD }}
+          TF_VAR_git_sha: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          terraform apply \
+            -var-file="environments/${{ inputs.environment }}.tfvars" \
+            -var "image_tag=${{ inputs.image_tag }}" \
+            -input=false -no-color -auto-approve -lock-timeout=5m
+
+      - name: Read the deployed URLs
+        id: outputs
+        working-directory: infrastructure/terraform
+        run: |
+          set -euo pipefail
+          echo "dashboard_url=$(terraform output -raw dashboard_url)" >> "$GITHUB_OUTPUT"
+          echo "api_url=$(terraform output -raw api_url)" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------------
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          api="${{ steps.outputs.outputs.api_url }}"
+          dashboard="${{ steps.outputs.outputs.dashboard_url }}"
+
+          # A container app scaled to zero cold-starts on the first request, and
+          # a new revision takes time to become healthy - so poll rather than
+          # curl once and declare failure.
+          poll() {
+            local url="$1" name="$2" attempts=30
+            for i in $(seq 1 $attempts); do
+              code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' --max-time 20 "$url" || echo 000)
+              if [ "$code" = "200" ]; then
+                echo "$name OK after ${i} attempt(s)"
+                head -c 400 /tmp/body.txt; echo
+                return 0
+              fi
+              echo "$name -> HTTP $code (attempt $i/$attempts)"
+              sleep 10
+            done
+            echo "::error::$name never returned 200 at $url"
+            return 1
+          }
+
+          # /health checks the database connection, so a 200 means more than
+          # "the process is running".
+          poll "${api}/health" "API /health"
+          poll "${dashboard}/_stcore/health" "Dashboard health"
+
+      - name: Verify the running revision is the image we deployed
+        run: |
+          set -euo pipefail
+          # Guards against the case where the apply succeeded but the new
+          # revision failed to activate and traffic still serves the old one.
+          for app in "$(terraform -chdir=infrastructure/terraform output -raw dashboard_app_name)" \
+                     "$(terraform -chdir=infrastructure/terraform output -raw api_app_name)"; do
+            running=$(az containerapp show \
+              --resource-group "${{ steps.tf.outputs.resource_group }}" \
+              --name "$app" \
+              --query "properties.template.containers[0].image" -o tsv)
+            echo "$app -> $running"
+            case "$running" in
+              *:"${{ inputs.image_tag }}") ;;
+              *) echo "::error::$app is running $running, expected tag ${{ inputs.image_tag }}"; exit 1 ;;
+            esac
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Deployed to ${{ inputs.environment }}"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Image tag | \`${{ inputs.image_tag }}\` |"
+            echo "| Commit | \`${GITHUB_SHA:0:7}\` |"
+            echo "| Dashboard | ${{ steps.outputs.outputs.dashboard_url }} |"
+            echo "| API | ${{ steps.outputs.outputs.api_url }} |"
+            echo "| Migrations | ${{ inputs.run_migrations }} |"
+            echo "| Promoted from | ${{ inputs.source_environment || 'built in this run' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
