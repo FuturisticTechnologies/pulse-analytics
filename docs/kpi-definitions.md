@@ -257,6 +257,22 @@ A decline that succeeds on retry is invisible to the customer and very visible
 to the gateway. One ambiguous "success rate" would be argued about in every
 review, so both are published with explicit names.
 
+**By gateway** (`gold.mart_payment_gateway_success`, Operations page), both
+rates are shown side by side with their denominators named:
+
+```
+attempt_success_rate_pct = attempts_captured / authorisation_attempts × 100   -- denominator A
+order_success_rate_pct   = orders_paid       / orders_attempted       × 100   -- denominator B
+```
+
+* Refund rows are **not** authorisation attempts and are in neither denominator.
+* An order is counted once, against the gateway of its **final** authorisation
+  attempt. Refunds never compete for "final" — before PULA-105 they did, which
+  made every captured-then-returned order count as unpaid and understated the
+  per-order rate by roughly 12 points on the test dataset.
+* The source records the payment method only, so the method is the gateway.
+* Published for the last 90 days and for all history.
+
 ### Recovery rate
 
 ```
@@ -291,7 +307,28 @@ conversion that event-counted funnels routinely show.
 
 ```
 cart_abandonment_pct = 100 − (sessions reaching purchase / sessions reaching add-to-cart × 100)
+drop_off_pct         = 100 − step_conversion_pct          -- per stage, vs the previous stage
 ```
+
+### Cancellations and returns by reason
+
+`gold.mart_order_exceptions` — one row per period × outcome × reason, with two
+denominators:
+
+| Metric | Denominator | Answers |
+| --- | --- | --- |
+| `share_of_outcome_pct` | all orders with the same outcome (A) | which reason to fix **first** |
+| `rate_of_orders_placed_pct` | all orders placed in the period (B) | did the fix **work** — comparable across periods |
+
+```
+cancellation_rate_pct = cancelled orders / orders placed × 100   -- a ratio of counts, never an average of daily rates
+return_rate_pct       = returned orders  / orders placed × 100
+```
+
+Reason codes are mapped to a label and a group (Product, Fulfilment, Customer,
+Payment, Inventory) in `044_mart_order_exceptions.sql`. A blank reason is
+reported as **Not recorded** and an unknown code as **Unmapped** — both stay in
+the totals. Monthly rates are in `gold.mart_order_exceptions_monthly`.
 
 ---
 
@@ -362,6 +399,7 @@ what the customer is worth, times how likely we are to lose them.
 | Marketing | `037_mart_marketing.sql` | `analytics/marketing/attribution.py` | `ROAS`, `CAC` |
 | Inventory | `039_mart_inventory_health.sql` | `analytics/inventory/optimisation.py` | `Stock On Hand` |
 | Funnel, payments | `040_mart_funnel_payments.sql` | — | `Conversion Rate %` |
+| Cancellations, returns | `044_mart_order_exceptions.sql` | — | — |
 | Executive | `041_mart_executive.sql` | — | all of the above |
 
 Reconciliation between the SQL implementations is asserted by

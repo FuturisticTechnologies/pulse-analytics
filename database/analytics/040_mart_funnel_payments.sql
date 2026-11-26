@@ -165,3 +165,76 @@ SELECT
           / NULLIF(SUM(failures) OVER (), 0) * 100, 2)              AS share_of_failures_pct,
     CAST(RANK() OVER (ORDER BY failures DESC) AS INTEGER)           AS failure_rank
 FROM failures;
+
+-- ===========================================================================
+-- gold.mart_payment_gateway_success - payment success by gateway, on BOTH
+-- denominators, side by side and named for what they divide by (PULA-105).
+--
+--   attempt_success_rate_pct = attempts_captured / authorisation_attempts
+--       "of every authorisation we sent this gateway, how many went through"
+--       - the number for the gateway conversation.
+--   order_success_rate_pct   = orders_paid / orders_attempted
+--       "of the orders whose payment ended on this gateway, how many got paid"
+--       - the number for the business. Higher, because retries recover.
+--
+-- The source records the payment method only; there is no separate processor
+-- field, so the method is the gateway here. Refund rows are excluded from both
+-- denominators: a refund is not an authorisation attempt. An order is counted
+-- once, against the gateway of its final authorisation attempt.
+-- ===========================================================================
+
+DROP TABLE IF EXISTS gold.mart_payment_gateway_success;
+CREATE TABLE gold.mart_payment_gateway_success AS
+WITH authorisations AS (
+    SELECT
+        p.payment_method,
+        p.payment_date,
+        p.attempt_number,
+        p.is_captured,
+        p.is_failed,
+        p.is_final_attempt
+    FROM gold.fact_payments p
+    WHERE NOT p.is_refunded
+),
+periods AS (
+    SELECT 'Last 90 days' AS period, 1 AS period_order, w.trailing_90_start AS period_start
+    FROM gold.analysis_window w
+    UNION ALL
+    SELECT 'All history', 2, w.first_date
+    FROM gold.analysis_window w
+),
+scoped AS (
+    SELECT pr.period, pr.period_order, a.*
+    FROM authorisations a
+    JOIN periods pr ON a.payment_date >= pr.period_start
+),
+counted AS (
+    SELECT
+        period,
+        period_order,
+        payment_method                                              AS gateway,
+        COUNT(*)                                                    AS authorisation_attempts,
+        COUNT(*) FILTER (WHERE is_captured)                         AS attempts_captured,
+        COUNT(*) FILTER (WHERE is_failed)                           AS attempts_failed,
+        COUNT(*) FILTER (WHERE is_final_attempt)                    AS orders_attempted,
+        COUNT(*) FILTER (WHERE is_final_attempt AND is_captured)    AS orders_paid,
+        COUNT(*) FILTER (WHERE is_final_attempt AND is_captured
+                           AND attempt_number > 1)                  AS orders_paid_on_retry
+    FROM scoped
+    GROUP BY period, period_order, payment_method
+)
+SELECT
+    period,
+    period_order,
+    gateway,
+    authorisation_attempts,
+    attempts_captured,
+    attempts_failed,
+    ROUND(CAST(attempts_captured AS DOUBLE PRECISION)
+          / NULLIF(authorisation_attempts, 0) * 100, 2)             AS attempt_success_rate_pct,
+    orders_attempted,
+    orders_paid,
+    orders_paid_on_retry,
+    ROUND(CAST(orders_paid AS DOUBLE PRECISION)
+          / NULLIF(orders_attempted, 0) * 100, 2)                   AS order_success_rate_pct
+FROM counted;

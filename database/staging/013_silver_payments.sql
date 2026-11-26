@@ -5,6 +5,11 @@
 -- later refund. `is_final_attempt` marks the attempt that decided the order's
 -- fate, which is what the payment-success KPI must be measured on - counting
 -- every raw row would make the failure rate look worse than it is.
+--
+-- Refunds are not authorisation attempts and never compete for "final": a
+-- refund carries attempt_number 1 and a later timestamp than the capture it
+-- reverses, so ranking it with the attempts made every returned order look
+-- unpaid and pulled the per-order success rate down (PULA-105).
 -- ===========================================================================
 
 DROP TABLE IF EXISTS silver.payments;
@@ -25,7 +30,8 @@ WITH deduped AS (
         NULLIF(TRIM(COALESCE(failure_reason, '')), '') AS failure_reason,
         COALESCE(attempt_number, 1)                AS attempt_number,
         ROW_NUMBER() OVER (
-            PARTITION BY order_id
+            PARTITION BY order_id,
+                         CASE WHEN LOWER(TRIM(status)) = 'refunded' THEN 1 ELSE 0 END
             ORDER BY COALESCE(attempt_number, 1) DESC, payment_ts DESC
         )                                          AS _attempt_rank
     FROM deduped
@@ -42,7 +48,8 @@ SELECT
     status,
     failure_reason,
     attempt_number,
-    CASE WHEN _attempt_rank = 1 THEN TRUE ELSE FALSE END AS is_final_attempt,
+    CASE WHEN _attempt_rank = 1 AND COALESCE(status, '') <> 'refunded'
+         THEN TRUE ELSE FALSE END                  AS is_final_attempt,
     CASE WHEN status = 'captured' THEN TRUE ELSE FALSE END AS is_captured,
     CASE WHEN status = 'failed'   THEN TRUE ELSE FALSE END AS is_failed,
     CASE WHEN status = 'refunded' THEN TRUE ELSE FALSE END AS is_refunded,

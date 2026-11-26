@@ -69,6 +69,7 @@ accepted business reality:
 | `bronze.order_items.quantity` is positive | 2%, warning | a known bug in the returns integration. Silver repairs it; bronze only has to notice. |
 | `bronze.orders.order_id` duplicate rate | 2%, warning | the source replays a small number of orders. De-duplicated in silver. |
 | no order predates its customer's signup | 0.5%, warning | a customer-master sync lag is real and small |
+| cancelled and returned orders carry a reason | 10%, warning | the order system does not force a reason. The gap is shown on the Operations page as *Not recorded*. |
 
 Setting these to zero would turn known, quantified, accepted realities into
 nightly false alarms. **A suite that cries wolf is a suite that gets switched

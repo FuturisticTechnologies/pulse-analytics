@@ -92,6 +92,7 @@ CREATE TABLE bronze.orders (
     order_date      DATE,
     channel         VARCHAR(40),
     status          VARCHAR(20),
+    status_reason   VARCHAR(60),        -- why cancelled/returned; often blank
     currency        VARCHAR(8),
     campaign_id     DOUBLE PRECISION,   -- nullable FK arrives as float from CSV
     item_count      INTEGER,

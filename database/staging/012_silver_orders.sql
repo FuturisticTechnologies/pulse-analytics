@@ -68,6 +68,12 @@ SELECT
     CAST(EXTRACT(HOUR FROM d.order_ts) AS INTEGER)               AS order_hour,
     TRIM(d.channel)                                              AS channel,
     LOWER(TRIM(d.status))                                        AS status,
+    -- Reason is only meaningful for a cancelled or returned order; anything
+    -- recorded against another status is noise from an edited order and is
+    -- dropped. Blank becomes NULL so 'not recorded' is one value, not two.
+    CASE WHEN LOWER(TRIM(d.status)) IN ('cancelled', 'returned')
+         THEN NULLIF(LOWER(TRIM(COALESCE(d.status_reason, ''))), '')
+    END                                                          AS status_reason,
     COALESCE(NULLIF(TRIM(d.currency), ''), 'USD')                AS currency,
     CAST(d.campaign_id AS INTEGER)                               AS campaign_id,
     COALESCE(lt.items_lines, 0)                                  AS line_count,

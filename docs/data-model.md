@@ -118,7 +118,7 @@ flagged, counted, and reported — which is the honest treatment.
 
 ## Marts
 
-23 tables in `database/analytics/`, grouped by the audience that reads them:
+26 tables in `database/analytics/`, grouped by the audience that reads them:
 
 | Domain | Marts |
 | --- | --- |
@@ -128,7 +128,8 @@ flagged, counted, and reported — which is the honest treatment.
 | Regional | `mart_regional_performance`, `mart_store_performance`, `mart_revenue_local` |
 | Inventory | `mart_inventory_health`, `mart_inventory_weekly` |
 | Behaviour | `mart_conversion_funnel`, `mart_funnel_by_device` |
-| Payments | `mart_payment_health`, `mart_payment_failures` |
+| Payments | `mart_payment_health`, `mart_payment_failures`, `mart_payment_gateway_success` |
+| Fulfilment | `mart_order_exceptions`, `mart_order_exceptions_monthly` |
 | Executive | `mart_executive_kpis` (exactly one row) |
 
 Plus `gold.analysis_window` — one row defining the platform's "today".

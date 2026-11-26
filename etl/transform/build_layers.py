@@ -48,6 +48,8 @@ LAYER_TABLES: dict[str, list[tuple[str, str]]] = {
         ("gold", "mart_campaign_performance"), ("gold", "mart_regional_performance"),
         ("gold", "mart_inventory_health"), ("gold", "mart_conversion_funnel"),
         ("gold", "mart_payment_health"), ("gold", "mart_executive_kpis"),
+        ("gold", "mart_payment_gateway_success"), ("gold", "mart_order_exceptions"),
+        ("gold", "mart_order_exceptions_monthly"),
     ],
 }
 

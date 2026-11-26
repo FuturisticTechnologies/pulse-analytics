@@ -16,7 +16,9 @@ FACTS = ["fact_orders", "fact_sales", "fact_payments",
 MARTS = ["mart_sales_daily", "mart_sales_monthly", "mart_customer_360",
          "mart_rfm_segments", "mart_cohort_retention", "mart_campaign_performance",
          "mart_regional_performance", "mart_inventory_health",
-         "mart_conversion_funnel", "mart_payment_health", "mart_executive_kpis"]
+         "mart_conversion_funnel", "mart_payment_health", "mart_executive_kpis",
+         "mart_payment_gateway_success", "mart_order_exceptions",
+         "mart_order_exceptions_monthly"]
 
 TOLERANCE = 0.01     # currency rounding across two aggregation paths
 
@@ -222,3 +224,85 @@ def test_flat_view_matches_the_fact_row_count(db):
     """The wide BI view must not fan out - a fan-out here doubles revenue in
     every Power BI visual built on it."""
     assert db.row_count("gold", "v_sales_flat") == db.row_count("gold", "fact_sales")
+
+
+# --------------------------------------------------------------------------- #
+# Operations page marts (PULA-105)
+# --------------------------------------------------------------------------- #
+def test_a_refund_is_never_the_final_payment_attempt(db):
+    """A refund shares attempt_number 1 with the capture it reverses and comes
+    later, so it used to win the 'final attempt' slot and make every returned
+    order look unpaid."""
+    assert db.scalar(
+        "SELECT COUNT(*) FROM silver.payments WHERE is_final_attempt AND is_refunded"
+    ) == 0
+    assert db.scalar("""
+        SELECT COUNT(*) FROM (
+            SELECT order_id FROM silver.payments
+            WHERE is_final_attempt GROUP BY order_id HAVING COUNT(*) > 1
+        ) d
+    """) == 0
+
+
+def test_a_returned_order_that_was_captured_counts_as_paid(db):
+    unpaid = db.scalar("""
+        SELECT COUNT(DISTINCT p.order_id)
+        FROM silver.payments p
+        JOIN silver.orders o ON o.order_id = p.order_id
+        WHERE o.is_returned AND p.is_refunded
+          AND NOT EXISTS (
+              SELECT 1 FROM silver.payments f
+              WHERE f.order_id = p.order_id AND f.is_final_attempt AND f.is_captured
+          )
+    """)
+    assert unpaid == 0, f"{unpaid} refunded orders are reported as never paid"
+
+
+def test_gateway_success_publishes_both_denominators(db):
+    frame = db.query("SELECT * FROM gold.mart_payment_gateway_success")
+    assert set(frame["period"]) == {"Last 90 days", "All history"}
+    for rate, numerator, denominator in [
+        ("attempt_success_rate_pct", "attempts_captured", "authorisation_attempts"),
+        ("order_success_rate_pct", "orders_paid", "orders_attempted"),
+    ]:
+        expected = (frame[numerator] / frame[denominator] * 100).round(2)
+        assert (frame[rate] - expected).abs().max() <= TOLERANCE
+        assert frame[rate].between(0, 100).all()
+    # Retries recover failures, so per order can never be worse than per attempt.
+    assert (frame["order_success_rate_pct"] >= frame["attempt_success_rate_pct"]).all()
+
+
+def test_gateway_success_excludes_refunds_and_counts_each_order_once(db):
+    all_history = db.query(
+        "SELECT * FROM gold.mart_payment_gateway_success WHERE period = 'All history'"
+    )
+    attempts = db.scalar("SELECT COUNT(*) FROM gold.fact_payments WHERE NOT is_refunded")
+    orders = db.scalar(
+        "SELECT COUNT(DISTINCT order_id) FROM gold.fact_payments WHERE NOT is_refunded"
+    )
+    assert int(all_history["authorisation_attempts"].sum()) == attempts
+    assert int(all_history["orders_attempted"].sum()) == orders
+
+
+def test_order_exceptions_account_for_every_cancelled_and_returned_order(db):
+    frame = db.query("SELECT * FROM gold.mart_order_exceptions WHERE period = 'All history'")
+    for outcome, flag in [("Cancelled", "is_cancelled"), ("Returned", "is_returned")]:
+        expected = db.scalar(f"SELECT COUNT(*) FROM gold.fact_orders WHERE {flag}")
+        rows = frame[frame["outcome"] == outcome]
+        assert int(rows["orders"].sum()) == expected
+        assert abs(rows["share_of_outcome_pct"].sum() - 100) < 0.5
+    assert (frame["orders_placed"] == db.row_count("gold", "fact_orders")).all()
+
+
+def test_missing_reasons_stay_visible_rather_than_dropping_out(db):
+    frame = db.query("SELECT * FROM gold.mart_order_exceptions")
+    gaps = frame[~frame["is_mapped"].astype(bool)]
+    assert set(gaps["reason_group"]) <= {"Not recorded", "Unmapped"}
+    assert frame["reason_label"].notna().all()
+
+
+def test_monthly_exception_rates_are_ratios_of_counts(db):
+    frame = db.query("SELECT * FROM gold.mart_order_exceptions_monthly")
+    assert int(frame["orders_placed"].sum()) == db.row_count("gold", "fact_orders")
+    expected = (frame["orders_cancelled"] / frame["orders_placed"] * 100).round(2)
+    assert (frame["cancellation_rate_pct"] - expected).abs().max() <= TOLERANCE
