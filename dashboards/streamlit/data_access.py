@@ -178,6 +178,26 @@ def payment_failures() -> pd.DataFrame:
     return query("SELECT * FROM gold.mart_payment_failures ORDER BY failures DESC")
 
 
+def payment_gateway_success() -> pd.DataFrame:
+    return query(
+        "SELECT * FROM gold.mart_payment_gateway_success "
+        "ORDER BY period_order, authorisation_attempts DESC"
+    )
+
+
+def order_exceptions() -> pd.DataFrame:
+    return query(
+        "SELECT * FROM gold.mart_order_exceptions "
+        "ORDER BY period_order, outcome, orders DESC"
+    )
+
+
+def order_exceptions_monthly() -> pd.DataFrame:
+    frame = query("SELECT * FROM gold.mart_order_exceptions_monthly ORDER BY month_start")
+    frame["month_start"] = pd.to_datetime(frame["month_start"])
+    return frame
+
+
 def revenue_local() -> pd.DataFrame:
     return query("SELECT * FROM gold.mart_revenue_local ORDER BY revenue_usd DESC")
 

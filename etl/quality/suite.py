@@ -104,6 +104,36 @@ def silver_checks() -> list[Check]:
 
         accepted_values("silver", "orders", "status", ORDER_STATUSES),
         accepted_values("silver", "payments", "status", PAYMENT_STATUSES),
+
+        # Known and accepted: the order system does not force a reason on a
+        # cancellation or a return. The dashboard shows the gap as 'Not
+        # recorded'; this check makes sure the gap stays small (PULA-105).
+        Check(
+            name="cancelled and returned orders carry a reason",
+            layer="silver", table="orders", dimension="completeness",
+            severity="warning", threshold_pct=10.0,
+            failing_sql=(
+                "SELECT COUNT(*) FILTER (WHERE status_reason IS NULL) AS failed_rows, "
+                "COUNT(*) AS total_rows "
+                "FROM silver.orders WHERE status IN ('cancelled', 'returned')"
+            ),
+            details="A blank reason cannot be acted on. Shown as 'Not recorded'.",
+        ),
+        # Payment success per order relies on exactly one deciding attempt per
+        # order. A refund ranked as 'final' made returned orders look unpaid.
+        Check(
+            name="at most one final attempt per order, never a refund",
+            layer="silver", table="payments", dimension="validity",
+            failing_sql=(
+                "SELECT COUNT(*) FILTER (WHERE finals > 1 OR refund_finals > 0) AS failed_rows, "
+                "COUNT(*) AS total_rows FROM ("
+                "SELECT order_id, "
+                "COUNT(*) FILTER (WHERE is_final_attempt) AS finals, "
+                "COUNT(*) FILTER (WHERE is_final_attempt AND is_refunded) AS refund_finals "
+                "FROM silver.payments GROUP BY order_id) f"
+            ),
+            details="Each order is decided by one authorisation attempt.",
+        ),
         accepted_values("silver", "customers", "loyalty_tier", LOYALTY_TIERS),
 
         # The repairs promised by the silver layer, asserted rather than assumed.
@@ -254,6 +284,28 @@ def gold_checks() -> list[Check]:
                 (SELECT COUNT(*) FROM silver.orders)     AS right_value
             """,
             details="The star schema must not drop or duplicate orders.",
+        ),
+        reconciles(
+            "order exceptions reconcile to fact_orders", "gold", "mart_order_exceptions",
+            """
+            SELECT
+                (SELECT SUM(orders) FROM gold.mart_order_exceptions
+                  WHERE period = 'All history')                                AS left_value,
+                (SELECT COUNT(*) FROM gold.fact_orders
+                  WHERE is_cancelled OR is_returned)                           AS right_value
+            """,
+            details="Every cancelled or returned order appears under exactly one reason.",
+        ),
+        reconciles(
+            "gateway success counts every order once", "gold", "mart_payment_gateway_success",
+            """
+            SELECT
+                (SELECT SUM(orders_attempted) FROM gold.mart_payment_gateway_success
+                  WHERE period = 'All history')                                AS left_value,
+                (SELECT COUNT(DISTINCT order_id) FROM gold.fact_payments
+                  WHERE NOT is_refunded)                                       AS right_value
+            """,
+            details="The per-order denominator must count each paid-for order exactly once.",
         ),
 
         # ---- funnel sanity --------------------------------------------------

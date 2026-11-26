@@ -68,6 +68,7 @@ SELECT
     COALESCE(cp.campaign_key, -1)                       AS campaign_key,
     o.channel                                           AS order_channel,
     o.status                                            AS order_status,
+    o.status_reason                                     AS order_status_reason,
     o.currency,
     o.line_count,
     o.item_count,

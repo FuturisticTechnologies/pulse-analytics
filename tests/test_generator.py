@@ -157,3 +157,41 @@ def test_blended_roas_is_realistic(tables, generator_module):
         f"blended ROAS is {roas:.2f}, expected around "
         f"{generator_module.TARGET_BLENDED_ROAS}"
     )
+
+
+def test_only_cancelled_and_returned_orders_carry_a_reason(tables, generator_module):
+    orders = tables["orders"]
+    exceptions = orders["status"].isin(["cancelled", "returned"])
+    assert orders.loc[~exceptions, "status_reason"].isna().all()
+
+    cancelled = orders.loc[orders["status"] == "cancelled", "status_reason"].dropna()
+    returned = orders.loc[orders["status"] == "returned", "status_reason"].dropna()
+    assert set(cancelled) <= set(generator_module.CANCELLATION_REASONS)
+    assert set(returned) <= set(generator_module.RETURN_REASONS)
+
+    # Most exceptions have a reason, but not all - the gap is deliberate.
+    missing_share = orders.loc[exceptions, "status_reason"].isna().mean()
+    assert 0 < missing_share < 0.15
+
+
+def test_reason_column_does_not_disturb_any_other_draw(tmp_path, generator_module):
+    """The reasons use their own random stream. Adding them must not move a
+    single value in any other table, or every published figure would shift."""
+    generator_module.main(["--seed", "7", "--customers", "40", "--products", "10",
+                           "--orders", "200", "--events", "300", "--campaigns", "3",
+                           "--output", str(tmp_path)])
+    generator = generator_module.PulseDataGenerator
+    original = generator._status_reasons
+    try:
+        generator._status_reasons = lambda self, status: [None] * len(status)
+        generator_module.main(["--seed", "7", "--customers", "40", "--products", "10",
+                               "--orders", "200", "--events", "300", "--campaigns", "3",
+                               "--output", str(tmp_path / "without")])
+    finally:
+        generator._status_reasons = original
+    with_reasons = pd.read_csv(tmp_path / "orders.csv").drop(columns="status_reason")
+    without = pd.read_csv(tmp_path / "without" / "orders.csv").drop(columns="status_reason")
+    pd.testing.assert_frame_equal(with_reasons, without)
+    for name in ["order_items", "payments", "customers", "customer_events"]:
+        pd.testing.assert_frame_equal(pd.read_csv(tmp_path / f"{name}.csv"),
+                                      pd.read_csv(tmp_path / "without" / f"{name}.csv"))

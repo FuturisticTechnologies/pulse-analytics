@@ -79,6 +79,24 @@ FAILURE_REASONS = [
     "network_timeout", "fraud_suspected", "invalid_cvc",
 ]
 
+# Why an order was cancelled or returned. Codes are what the order system
+# records; silver.orders maps them to labels and groups. A small share is left
+# blank on purpose - the source does not force agents to pick a reason, and the
+# dashboard has to show that gap rather than hide it.
+CANCELLATION_REASONS = [
+    "customer_request", "payment_failed", "out_of_stock",
+    "delivery_too_slow", "duplicate_order", "fraud_review",
+]
+CANCELLATION_REASON_WEIGHTS = np.array([0.38, 0.17, 0.16, 0.13, 0.09, 0.07])
+
+RETURN_REASONS = [
+    "size_or_fit", "not_as_described", "damaged_in_transit",
+    "defective", "changed_mind", "wrong_item_sent", "arrived_late",
+]
+RETURN_REASON_WEIGHTS = np.array([0.24, 0.19, 0.14, 0.13, 0.13, 0.10, 0.07])
+
+MISSING_REASON_SHARE = 0.04
+
 LOYALTY_TIERS = ["Bronze", "Silver", "Gold", "Platinum"]
 
 MARKETING_CHANNELS = ["Paid Search", "Social", "Email", "Display", "Affiliate", "Influencer"]
@@ -564,6 +582,8 @@ class PulseDataGenerator:
         recent = order_days > (self.n_days - 4)
         status[recent & (rng.random(self.n_orders) < 0.35)] = "pending"
 
+        status_reason = self._status_reasons(status)
+
         orders = pd.DataFrame(
             {
                 "order_id": np.arange(1, self.n_orders + 1),
@@ -573,6 +593,7 @@ class PulseDataGenerator:
                 "order_date": order_dates.date if hasattr(order_dates, "date") else order_dates,
                 "channel": order_channels,
                 "status": status,
+                "status_reason": status_reason,
                 "currency": "USD",
                 "campaign_id": campaign_id,
                 "region_id": region_ids,
@@ -582,6 +603,29 @@ class PulseDataGenerator:
         orders["order_date"] = pd.to_datetime(orders["order_ts"]).dt.date
         self.tables["orders"] = orders
         return orders
+
+    def _status_reasons(self, status: np.ndarray) -> np.ndarray:
+        """Reason code for cancelled and returned orders, None for the rest.
+
+        Drawn from a dedicated random stream rather than ``self.rng`` so that
+        adding the column does not shift a single draw anywhere else - every
+        other table is byte-identical to what the same seed produced before.
+        """
+        rng = np.random.default_rng([self.seed, 105])
+        n = len(status)
+        reasons = np.full(n, None, dtype=object)
+
+        cancelled = status == "cancelled"
+        returned = status == "returned"
+        reasons[cancelled] = rng.choice(
+            CANCELLATION_REASONS, int(cancelled.sum()), p=CANCELLATION_REASON_WEIGHTS
+        )
+        reasons[returned] = rng.choice(
+            RETURN_REASONS, int(returned.sum()), p=RETURN_REASON_WEIGHTS
+        )
+        not_recorded = (cancelled | returned) & (rng.random(n) < MISSING_REASON_SHARE)
+        reasons[not_recorded] = None
+        return reasons
 
     def build_order_items(self) -> pd.DataFrame:
         rng = self.rng
