@@ -10,3 +10,14 @@
 ## Description
 
 Make it possible to answer "is the number wrong, or is the pipeline wrong?" without reading SQL.
+
+## Scope
+
+- the check framework
+- the first suite of checks
+- the reconciliation checks
+- ops.data_quality_results as durable history
+
+## Out of scope
+
+Paging anyone. Results are recorded and reviewed on Monday until somebody depends on the warehouse.
