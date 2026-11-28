@@ -10,3 +10,7 @@
 ## Description
 
 The revenue-and-margin chart on the sales page uses a secondary y-axis, against ADR-004. The two series cross in September in the demo data, and the crossing reads as a real event when it is an artefact of the two scales.
+
+## Scope and acceptance
+
+- Fix: split into two aligned charts sharing an x-axis.
