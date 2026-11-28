@@ -6,3 +6,7 @@
 - Status: Done
 - Created: 2026-05-12 09:15
 - Project: PulseAnalytics (PULA)
+
+## Description
+
+As the model, I want an order-grain fact table, so that order-level metrics are computed at order level.
